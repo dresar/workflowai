@@ -50,7 +50,25 @@ export function ClaudeCollaboratorModal({
         api.admin.promptTemplates.getByType(documentType).catch(() => []),
       ]);
 
-      const canvasFeatures = canvas?.features || [];
+      // Normalisasi format canvasFeatures agar kompatibel dengan data array maupun object blueprint
+      let canvasFeaturesFormatted = "";
+      if (canvas && canvas.features) {
+        if (Array.isArray(canvas.features)) {
+          canvasFeaturesFormatted = canvas.features.map((f: any) => `- ${f.name} [Phase: ${f.phase}]: ${f.subs?.join(", ") || ""}`).join("\n");
+        } else if (typeof canvas.features === 'object') {
+          const blueprint = canvas.features as any;
+          if (Array.isArray(blueprint.pages)) {
+            canvasFeaturesFormatted += `Frontend Pages:\n` + blueprint.pages.map((p: any) => `- ${p.name} (${p.route}) - ${p.description || ''}`).join("\n") + "\n";
+          }
+          if (Array.isArray(blueprint.apiEndpoints)) {
+            canvasFeaturesFormatted += `Backend API Endpoints:\n` + blueprint.apiEndpoints.map((e: any) => `- ${e.method} ${e.path} - ${e.description || ''}`).join("\n") + "\n";
+          }
+          if (Array.isArray(blueprint.tables)) {
+            canvasFeaturesFormatted += `Database Tables:\n` + blueprint.tables.map((t: any) => `- ${t.name} (${(t.columns || []).join(', ')}) - ${t.description || ''}`).join("\n") + "\n";
+          }
+        }
+      }
+
       const docs: Record<string, string> = {};
       if (Array.isArray(docsResult)) {
         docsResult.forEach((d: any) => {
@@ -83,8 +101,8 @@ ${techs.map((t: any) => `- ${t.category}: ${t.technologyName}`).join("\n")}
 INTERVIEW ANSWERS:
 ${answers.map((a: any) => `Q: ${a.question ?? a.questionId}\nA: ${JSON.stringify(a.answer)}`).join("\n\n")}
 
-FEATURE CANVAS:
-${canvasFeatures.map((f: any) => `- ${f.name} [Phase: ${f.phase}]: ${f.subs?.join(", ") || ""}`).join("\n")}
+FEATURE CANVAS / SPECIFICATIONS:
+${canvasFeaturesFormatted}
 
 EXISTING DOCUMENTS:
 ${Object.entries(docs)

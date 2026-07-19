@@ -33,14 +33,7 @@ export const saveAnswersSchema = z.object({
 });
 
 export const saveCanvasSchema = z.object({
-  features: z.array(z.object({
-    name: z.string(),
-    phase: z.string(),
-    icon: z.string().optional(),
-    iconName: z.string().optional(),
-    subs: z.array(z.string()),
-    tasks: z.array(z.string()).optional(),
-  })),
+  features: z.union([z.array(z.any()), z.record(z.any())]),
   isAiGenerated: z.boolean().default(false),
 });
 

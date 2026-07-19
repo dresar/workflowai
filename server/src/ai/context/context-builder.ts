@@ -76,9 +76,35 @@ export class ContextBuilder {
       .orderBy(desc(generatedDocuments.createdAt))
       .limit(10);
 
-    const canvasFeatures = canvas[0]
-      ? (canvas[0].features as Array<{ name: string; phase: string; subs: string[] }>)
-      : [];
+    const featuresRaw = canvas[0]?.features;
+    let canvasFeatures: Array<{ name: string; phase: string; subs: string[] }> = [];
+
+    if (Array.isArray(featuresRaw)) {
+      canvasFeatures = featuresRaw as any;
+    } else if (featuresRaw && typeof featuresRaw === 'object') {
+      const blueprint = featuresRaw as any;
+      if (Array.isArray(blueprint.pages)) {
+        canvasFeatures.push({
+          name: "Frontend Pages",
+          phase: "Frontend Layer",
+          subs: blueprint.pages.map((p: any) => `${p.name} (${p.route}) - ${p.description || ''}`)
+        });
+      }
+      if (Array.isArray(blueprint.apiEndpoints)) {
+        canvasFeatures.push({
+          name: "Backend API Endpoints",
+          phase: "Backend Layer",
+          subs: blueprint.apiEndpoints.map((e: any) => `${e.method} ${e.path} - ${e.description || ''}`)
+        });
+      }
+      if (Array.isArray(blueprint.tables)) {
+        canvasFeatures.push({
+          name: "Database Tables",
+          phase: "Database Layer",
+          subs: blueprint.tables.map((t: any) => `${t.name} (${(t.columns || []).join(', ')}) - ${t.description || ''}`)
+        });
+      }
+    }
 
     return {
       project: {

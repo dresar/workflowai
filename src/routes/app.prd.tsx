@@ -228,6 +228,29 @@ function MarkdownRenderer({ content }: { content: string }) {
   return <div className="space-y-1">{elements}</div>;
 }
 
+// ============================================================
+// STAGE BAR
+// ============================================================
+function StageBar({ active }: { active: number }) {
+  const stages = ["Canvas", "Tasks", "Blueprint", "Prompting"];
+  return (
+    <div className="flex items-center gap-1 text-[11px]">
+      {stages.map((s, i) => (
+        <span key={s} className="flex items-center gap-1">
+          <span className={cn("flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold",
+            i < active ? "border-emerald-700/40 bg-emerald-950/40 text-emerald-400" :
+            i === active ? "border-indigo-500/40 bg-indigo-950/40 text-indigo-400" :
+            "border-slate-800 text-slate-600"
+          )}>
+            {i < active && <Check size={9} />}{s}
+          </span>
+          {i < stages.length - 1 && <span className="text-slate-700">→</span>}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/app/prd")({
   component: PRDPage,
 });
@@ -246,71 +269,61 @@ function PRDPage() {
   const navigate = useNavigate();
   const projectId = typeof window !== "undefined" ? localStorage.getItem("active_project_id") : null;
   const [step, setStep] = useState(0);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState(true); // Mulai dari done true agar tidak langsung loading screen
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
+  const [hasNoPrd, setHasNoPrd] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [savingDb, setSavingDb] = useState(false);
 
   useEffect(() => {
     if (!projectId) {
       setLoading(false);
-      setDone(true);
       return;
     }
 
-    async function loadOrGeneratePRD() {
+    async function loadPRD() {
       try {
+        // 1. Coba load dari localStorage
+        const local = localStorage.getItem(`prd_content_${projectId}`);
+        if (local && local.trim().length > 10) {
+          setContent(local);
+          setHasNoPrd(false);
+          setLoading(false);
+          return;
+        }
+
+        // 2. Coba load dari DB
         const existing = await api.projects.getDocumentByType(projectId, "prd");
         if (existing && existing.content) {
-          setContent(getDisplayContent(existing.content));
-          setDone(true);
-          setLoading(false);
+          const displayContent = getDisplayContent(existing.content);
+          setContent(displayContent);
+          localStorage.setItem(`prd_content_${projectId}`, displayContent);
+          setHasNoPrd(false);
         } else {
-          generateNewPRD();
+          setHasNoPrd(true);
         }
       } catch {
-        generateNewPRD();
-      }
-    }
-
-    async function generateNewPRD() {
-      setDone(false);
-      setStep(0);
-      setLoading(true);
-
-      const interval = setInterval(() => {
-        setStep((s) => {
-          if (s < STEPS.length - 2) return s + 1;
-          return s;
-        });
-      }, 1500);
-
-      try {
-        const provider = typeof window !== "undefined" ? localStorage.getItem("active_provider") : undefined;
-        const result = await api.generate.prd(projectId, { provider });
-        if (result && result.content) {
-          setContent(getDisplayContent(result.content));
-        }
-      } catch (err) {
-        console.error(err);
+        setHasNoPrd(true);
       } finally {
-        clearInterval(interval);
-        setStep(STEPS.length - 1);
-        setTimeout(() => {
-          setDone(true);
-          setLoading(false);
-        }, 500);
+        setLoading(false);
       }
     }
 
-    loadOrGeneratePRD();
+    loadPRD();
   }, [projectId]);
 
-  async function handleRegenerate() {
-    if (!projectId) return;
+  // Auto-save ke local storage saja
+  useEffect(() => {
+    if (!projectId || !content) return;
+    localStorage.setItem(`prd_content_${projectId}`, content);
+  }, [content, projectId]);
 
+  async function generateNewPRD() {
+    if (!projectId) return;
     setDone(false);
     setStep(0);
-    setLoading(true);
+    setGenerating(true);
 
     const interval = setInterval(() => {
       setStep((s) => {
@@ -323,18 +336,41 @@ function PRDPage() {
       const provider = typeof window !== "undefined" ? localStorage.getItem("active_provider") : undefined;
       const result = await api.generate.prd(projectId, { provider });
       if (result && result.content) {
-        setContent(getDisplayContent(result.content));
+        const displayContent = getDisplayContent(result.content);
+        setContent(displayContent);
+        localStorage.setItem(`prd_content_${projectId}`, displayContent);
+        setHasNoPrd(false);
       }
     } catch (err) {
       console.error(err);
+      toast.error("Gagal generate PRD");
     } finally {
       clearInterval(interval);
       setStep(STEPS.length - 1);
       setTimeout(() => {
         setDone(true);
-        setLoading(false);
+        setGenerating(false);
       }, 500);
     }
+  }
+
+  async function handleProceedToPrompting() {
+    if (!projectId || !content) return;
+    setSavingDb(true);
+    const saveToast = toast.loading("Menyimpan blueprint lengkap ke database...");
+    try {
+      await api.projects.saveDocumentManual(projectId, "prd", { content });
+      toast.success("Blueprint berhasil disimpan ke database!", { id: saveToast });
+      navigate({ to: "/app/prompt" });
+    } catch {
+      toast.error("Gagal menyimpan blueprint ke database", { id: saveToast });
+    } finally {
+      setSavingDb(false);
+    }
+  }
+
+  async function handleRegenerate() {
+    await generateNewPRD();
   }
 
   if (!done) {
@@ -387,50 +423,85 @@ function PRDPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
-            <FileText size={18} />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold">Product Requirement Document</h1>
-            <p className="text-xs text-muted-foreground">Generated by AI · Draft v1</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(content); toast.success("Disalin"); }}>
-            <Copy className="mr-2 h-4 w-4" /> Copy
+    <div className="flex h-full flex-col overflow-hidden bg-[#070a0f]">
+      {/* Top Bar */}
+      <div className="flex items-center justify-between border-b border-slate-800/60 bg-slate-950/80 px-5 py-2.5 backdrop-blur-md z-10 relative">
+        <StageBar active={2} />
+        <div className="flex items-center gap-2">
+          <Button onClick={() => navigate({ to: "/app/tasks" })} variant="outline" size="sm" className="text-[11px] h-8 gap-1.5 border-slate-700">
+            <ArrowRight size={12} className="rotate-180" /> Tasks
           </Button>
-          <Button variant="outline" size="sm" onClick={() => {
-            const blob = new Blob([content], { type: "text/markdown" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "PRD.md";
-            a.click();
-          }}><Download className="mr-2 h-4 w-4" /> Markdown</Button>
-          <Button variant="outline" size="sm" onClick={handleRegenerate}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Generate Ulang
-          </Button>
-          <ClaudeCollaboratorModal projectId={projectId || ""} documentType="prd" onSaveSuccess={(newContent) => setContent(newContent)} />
-          <Button size="sm" onClick={() => navigate({ to: "/app/tasks" })}>
-            Lanjut ke Task <ArrowRight className="ml-2 h-4 w-4" />
+          {!hasNoPrd && (
+            <>
+              <Button variant="outline" size="sm" className="text-[11px] h-8 gap-1.5 border-slate-700" onClick={() => { navigator.clipboard.writeText(content); toast.success("Disalin"); }}>
+                <Copy size={12} /> Copy
+              </Button>
+              <Button variant="outline" size="sm" className="text-[11px] h-8 gap-1.5 border-slate-700" onClick={() => {
+                const blob = new Blob([content], { type: "text/markdown" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "PRD.md";
+                a.click();
+              }}><Download size={12} /> Markdown</Button>
+              <Button variant="outline" size="sm" className="text-[11px] h-8 gap-1.5 border-slate-700" onClick={handleRegenerate}>
+                <RefreshCw size={12} /> Generate Ulang
+              </Button>
+            </>
+          )}
+          <ClaudeCollaboratorModal projectId={projectId || ""} documentType="prd" onSaveSuccess={(newContent) => { setContent(newContent); setHasNoPrd(false); }} />
+          <Button onClick={handleProceedToPrompting} disabled={hasNoPrd || savingDb} size="sm" className="text-[11px] h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white">
+            {savingDb ? <Loader2 size={12} className="animate-spin" /> : null}
+            Blueprint Selesai → Generate Prompt <ArrowRight size={12} />
           </Button>
         </div>
       </div>
 
-      <div className="card-premium p-8">
-        {content ? (
-          <MarkdownRenderer content={content} />
-        ) : (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-sm text-muted-foreground mb-4">Gagal menghasilkan PRD secara otomatis karena batas limit AI.</p>
-            <ClaudeCollaboratorModal projectId={projectId || ""} documentType="prd" onSaveSuccess={(newContent) => setContent(newContent)} triggerButton={
-              <Button className="text-primary-foreground">Gunakan Bantuan Claude.ai</Button>
-            } />
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-slate-800">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-400 border border-indigo-500/25">
+              <FileText size={18} />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-slate-100">Product Requirement Document (Blueprint Lengkap)</h1>
+              <p className="text-xs text-slate-500">Mencakup seluruh context halaman UI, API endpoint, dan skema database</p>
+            </div>
           </div>
-        )}
+
+          {hasNoPrd ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center max-w-md mx-auto">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 mb-6">
+                <FileText size={28} />
+              </div>
+              <h2 className="text-sm font-bold text-slate-200">Buat Blueprint Lengkap (PRD)</h2>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                Anda belum menyusun dokumen requirement lengkap untuk proyek ini. AI akan membaca blueprint Canvas dan list Tasks Anda untuk menyusunnya secara otomatis.
+              </p>
+              <div className="flex gap-2.5 mt-6 w-full justify-center">
+                <Button onClick={generateNewPRD} disabled={generating} className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white gap-1.5">
+                  {generating ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                  Generate dengan AI
+                </Button>
+                <ClaudeCollaboratorModal projectId={projectId || ""} documentType="prd" onSaveSuccess={(newContent) => { setContent(newContent); setHasNoPrd(false); }} />
+              </div>
+            </div>
+          ) : (
+            <div className="bg-slate-900/60 border border-slate-800/60 rounded-2xl p-8 shadow-xl">
+              {content ? (
+                <MarkdownRenderer content={content} />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <p className="text-sm text-slate-400 mb-4">Gagal menghasilkan PRD secara otomatis karena batas limit AI.</p>
+                  <ClaudeCollaboratorModal projectId={projectId || ""} documentType="prd" onSaveSuccess={(newContent) => setContent(newContent)} triggerButton={
+                    <Button className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs">Gunakan Bantuan Claude.ai</Button>
+                  } />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

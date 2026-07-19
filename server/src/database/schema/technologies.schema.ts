@@ -2,7 +2,7 @@ import { pgTable, uuid, varchar, text, boolean, timestamp, integer } from 'drizz
 
 export const technologies = pgTable('technologies', {
   id: uuid('id').primaryKey().defaultRandom(),
-  name: varchar('name', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull().unique(),
   category: varchar('category', { length: 100 }).notNull(),
   version: varchar('version', { length: 50 }),
   description: text('description'),
