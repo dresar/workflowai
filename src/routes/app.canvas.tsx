@@ -715,9 +715,9 @@ function CanvasPage() {
 
         // 2. Coba load dari DB
         const canvas = await api.projects.getCanvas(projectId);
-        if (canvas?.blueprint?.pages) {
-          setBlueprint(canvas.blueprint);
-          localStorage.setItem(`canvas_blueprint_${projectId}`, JSON.stringify(canvas.blueprint));
+        if (canvas?.features?.pages) {
+          setBlueprint(canvas.features);
+          localStorage.setItem(`canvas_blueprint_${projectId}`, JSON.stringify(canvas.features));
         } else {
           // Tampilkan opsi generate, jangan otomatis generate di database/API
           setHasNoBlueprint(true);
@@ -779,7 +779,7 @@ function CanvasPage() {
     setSavingDb(true);
     const saveToast = toast.loading("Menyimpan blueprint canvas ke database...");
     try {
-      await api.projects.saveCanvas(projectId, { blueprint, isAiGenerated: false });
+      await api.projects.saveCanvas(projectId, { features: blueprint, isAiGenerated: false });
       toast.success("Blueprint berhasil disimpan ke database!", { id: saveToast });
       navigate({ to: "/app/tasks" });
     } catch {

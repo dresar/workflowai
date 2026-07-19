@@ -638,8 +638,8 @@ function PromptPage() {
     ]).then(([proj, techs, canvas, tasksDoc]) => {
       const name = proj?.name || "Proyek Aplikasi";
       const tech = techs?.map((t: any) => t.technologyName) || [];
-      const blueprintInfo = canvas?.blueprint
-        ? `Halaman: ${canvas.blueprint.pages?.map((p: any) => `${p.name} (${p.route})`).join(', ')}. API: ${canvas.blueprint.apiEndpoints?.map((e: any) => `${e.method} ${e.path}`).join(', ')}. Tabel: ${canvas.blueprint.tables?.map((t: any) => t.name).join(', ')}.`
+      const blueprintInfo = canvas?.features
+        ? `Halaman: ${canvas.features.pages?.map((p: any) => `${p.name} (${p.route})`).join(', ')}. API: ${canvas.features.apiEndpoints?.map((e: any) => `${e.method} ${e.path}`).join(', ')}. Tabel: ${canvas.features.tables?.map((t: any) => t.name).join(', ')}.`
         : '';
       const tasksInfo = tasksDoc?.content || '';
 

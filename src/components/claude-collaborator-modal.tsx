@@ -113,66 +113,144 @@ ${templateInstructions}
 
       if (documentType === "prd") {
         promptText += `
-YOUR TASK:
-Write a FINAL, COMPLETE, PROFESSIONAL Product Requirement Document (PRD) in ${project.language === "id" ? "Indonesian" : "English"}.
-The document must cover all features listed in the Feature Canvas in extreme detail.
-It MUST include:
-1. Executive Summary
-2. User Personas & Flows
-3. Complete Feature Specifications (Functional Requirements)
-4. Non-Functional Requirements
-5. Security & Privacy
-6. Future Scope
-7. Technical Stack Integration Details
+=== INSTRUKSI GENERATE PRODUCT REQUIREMENT DOCUMENT (PRD) ===
+Peran Anda: Lead Product Manager dan Principal Architect.
+Tugas Anda adalah menulis dokumen Product Requirement Document (PRD) yang sangat detail, profesional, dan komprehensif untuk proyek "${project.name}" (Ide: "${project.idea}").
 
-CRITICAL RULES:
-- Output ONLY the Markdown content. Do not include any chat prefix/suffix (like "Here is your PRD...").
-- NEVER use raw Markdown bold symbols like '***' or raw asterisks lists if they break styling.
-- Use only standard headers (#, ##, ###) and clean lists (- or numbered).
-- Be extremely verbose and detailed. Aim for at least 2500 words.`;
+STACK TEKNOLOGI YANG DIGUNAKAN:
+${techs.map((t: any) => `- ${t.category}: ${t.technologyName}`).join("\n")}
+
+INFORMASI CANVAS FITUR DAN SPESIFIKASI:
+${canvasFeaturesFormatted}
+
+ATURAN DAN ATURAN TEKNIS DOKUMEN:
+1. BAHASA: Tulis seluruh dokumen dalam ${project.language === "id" ? "Bahasa Indonesia yang baik, formal, dan profesional" : "English"}.
+2. FORMAT OUTPUT: Gunakan format Markdown standar.
+   - Gunakan heading H1 (#) hanya untuk judul utama.
+   - Gunakan heading H2 (##) untuk bab utama, dan H3 (###) untuk sub-bab.
+   - Untuk bullet point, gunakan karakter minus "- " (minus + spasi). JANGAN pernah menggunakan asterisk "*" sebagai bullet marker.
+   - Untuk teks tebal, gunakan "**teks**".
+   - JANGAN menulis tanda kurung atau simbol aneh yang merusak rendering markdown.
+3. KEDALAMAN KONTEN (PENTING! JANGAN ADA PLACEHOLDER):
+   - Dokumen ini harus sangat panjang (minimal 3500 - 5000 kata) dan mencakup seluruh aspek secara lengkap.
+   - Tulis secara eksplisit setiap kode SQL DDL, daftar file, struktur endpoint, dan komponen UI. Jangan tulis comment "// implementasi lainnya di sini...". AI pembuat code harus bisa membuat aplikasi ini langsung dari dokumen Anda tanpa bertanya lagi.
+
+STRUKTUR WAJIB DOKUMEN PRD:
+# Product Requirement Document (PRD) - ${project.name}
+
+## 1. Ringkasan Eksekutif (Executive Summary)
+- Latar belakang proyek, visi, tujuan bisnis, dan solusi yang ditawarkan.
+
+## 2. Deskripsi Masalah & Solusi (Problem Statement & Solution)
+- Detail masalah pengguna, target audiens, dan bagaimana sistem menyelesaikan masalah tersebut.
+
+## 3. Goals & Metrics (KPI Keberhasilan)
+- Indikator kesuksesan teknis dan bisnis secara kuantitatif.
+
+## 4. Analisis User Personas & User Journey
+- Profil user (contoh: Admin, Pengguna Biasa, Penjual) dan peta perjalanan pengguna (User Journey Map) dari awal registrasi hingga menggunakan fitur utama.
+
+## 5. Spesifikasi Fitur Detail (Functional Requirements)
+Untuk SETIAP fitur yang ada di Canvas Fitur/Spesifikasi di atas, buat sub-bagian detail seperti ini:
+### 5.x [Nama Fitur]
+- **Deskripsi:** Detail fungsionalitas fitur.
+- **User Stories:** Format "Sebagai [A], saya ingin [B] sehingga [C]".
+- **Acceptance Criteria:** Kriteria penerimaan teknis (minimal 4 poin detail).
+- **Alur Data & Logika:** Penjelasan langkah demi langkah bagaimana data diproses.
+- **Prioritas:** High/Medium/Low.
+
+## 6. Arsitektur Teknis & Struktur Database (Data Model)
+- **Desain Database:** Tulis kode SQL DDL lengkap menggunakan PostgreSQL untuk seluruh modul aplikasi. Gunakan tipe data UUID untuk primary key, foreign key dengan relasi ON DELETE CASCADE, tipe data TIMESTAMPTZ untuk tanggal, dan sertakan indeks (CREATE INDEX) untuk optimasi query.
+- **Struktur Folder Aplikasi:** Gambarkan tree struktur folder proyek (frontend dan backend).
+
+## 7. Desain API (API Specifications)
+- Tulis daftar lengkap endpoint API (Method, Path, Request Body JSON schema, Response JSON schema untuk sukses dan error, serta middleware auth yang dibutuhkan).
+
+## 8. Persyaratan Non-Fungsional (Non-Functional Requirements)
+- Keamanan (keamanan JWT token, password hashing, SQL injection prevention), Performansi (kecepatan respon < 200ms, caching), Skalabilitas, dan Ketersediaan.
+
+## 9. Aturan Bisnis & Batasan Sistem (Business Rules & Constraints)
+- Batasan input, aturan validasi form, hak akses (RBAC - Role-Based Access Control) detail untuk masing-masing user persona.
+
+## 10. Open Questions (Pertanyaan Terbuka)
+- Hal-hal yang memerlukan keputusan bisnis lebih lanjut.
+
+Output hanya dokumen PRD dalam format Markdown lengkap tanpa pembuka/penutup seperti "Ini dokumen PRD Anda:". Tulis langsung mulai dari judul "# Product Requirement Document (PRD)".`;
       } else if (documentType === "tasks") {
         promptText += `
-YOUR TASK:
-Write a step-by-step Vibe Coding Task Breakdown list in ${project.language === "id" ? "Indonesian" : "English"} tailored SPECIFICALLY for AI coding agents (like Cursor, Trae, Windsurf, or Antigravity).
-The task breakdown should guide the AI to implement the project incrementally.
+=== INSTRUKSI GENERATE VIBE CODING TASKS ===
+Peran Anda: Lead Engineering Manager.
+Tugas Anda adalah memecah rancangan proyek "${project.name}" (Ide: "${project.idea}") menjadi daftar Checklist Task yang sangat terstruktur, berurutan secara kronologis, dan siap dieksekusi oleh AI Coding Agent (seperti Antigravity, Cursor, Trae, atau Windsurf).
 
-CRITICAL RULES:
-- NEVER include time estimates, hours, story points, or sprints. This is for AI agents, not humans!
-- Output ONLY the Markdown content. Do not include introductory text.
-- Focus on coding: Setup, Database schema, API endpoints, Components, Integration.
-- Structure it cleanly.`;
+STACK TEKNOLOGI YANG DIGUNAKAN:
+${techs.map((t: any) => `- ${t.category}: ${t.technologyName}`).join("\n")}
+
+INFORMASI CANVAS FITUR DAN SPESIFIKASI:
+${canvasFeaturesFormatted}
+
+ATURAN BREAKDOWN TASK (PENTING):
+1. JANGAN PERNAH menyertakan estimasi waktu (seperti jam, hari, story points, atau sprint). AI coding agent tidak butuh estimasi waktu!
+2. Urutan harus logis secara kronologis: Setup & Init -> Skema Database & Migrasi -> Backend API & Middleware -> UI Components -> Frontend Pages -> Integrasi API & State Management -> Testing & DevOps.
+3. Tulis setidaknya 30 - 45 task spesifik dan mendalam. Setiap task harus berupa instruksi mandiri yang jelas file apa yang dibuat/diedit, apa logika kodenya, dan bagaimana memverifikasinya.
+4. BAHASA: Tulis dalam ${project.language === "id" ? "Bahasa Indonesia yang jelas dan instruktif" : "English"}.
+
+FORMAT OUTPUT (PILIH SALAH SATU FORMAT BERIKUT):
+Format 1: JSON Array (Sangat Direkomendasikan)
+Tulis HANYA sebuah valid JSON array of objects tanpa pembungkus markdown (tanpa \`\`\`json). Contoh format:
+[
+  {
+    "title": "Setup database table users dengan UUID primary key",
+    "category": "database",
+    "priority": "high",
+    "description": "Buat file src/db/schema/users.ts dengan kolom id UUID defaultRandom, email varchar, password text, role enum, createdAt timestamptz.",
+    "isAiGenerated": true
+  },
+  ...
+]
+
+Format 2: Markdown List (Alternatif)
+Jika Anda menulis dalam Markdown, gunakan format list bernomor dengan label kategori di awal judul task. Contoh format:
+1. [database] Setup database table users dengan UUID primary key - Buat file src/db/schema/users.ts dengan kolom id UUID, email, password, role, createdAt.
+2. [backend] Implementasi endpoint POST /api/v1/auth/register - Buat controller register di src/controllers/auth.controller.ts dan validasi input menggunakan Zod.
+3. [frontend] Buat reusable component Button dengan variant primary, secondary, dan size - Buat file src/components/ui/button.tsx.
+
+Kategori yang valid: "setup", "database", "backend", "frontend", "infra", "testing".
+
+Output hanya list task dalam format JSON array (atau Markdown list) tanpa ada teks pembuka atau penutup lainnya.`;
       } else if (documentType === "prompt") {
         promptText += `
-YOUR TASK:
-Generate an extremely comprehensive, exhaustive, and verbose "Vibe Coding Super Prompt" (modeled after prompt structures used in high-end generation engines) to build this application from scratch.
+=== INSTRUKSI GENERATE 10 MODUL AI CODING PROMPTS ===
+Peran Anda: Principal Prompt Engineer dan Tech Lead.
+Tugas Anda adalah menghasilkan payload JSON lengkap berisi 10 prompt terstruktur dan modular untuk membangun aplikasi "${project.name}" (Ide: "${project.idea}").
 
-CRITICAL FOCUS (DO NOT SKIP ANY PAGES OR ENDPOINTS):
-- Coding platforms often skip pages or components if they are not explicitly detailed. To prevent this, you MUST list and describe EVERY SINGLE page, modal, form, layout, and component from the project requirements in extreme detail.
-- You must prioritize the **UI/UX & Frontend** and **Backend & System Flow** sections. Provide full code blocks, exact Tailwind classes, folder structures, complete API route handlers, and middleware definitions rather than summaries or placeholders.
+STACK TEKNOLOGI YANG DIGUNAKAN:
+${techs.map((t: any) => `- ${t.category}: ${t.technologyName}`).join("\n")}
 
-CRITICAL JSON SPECIFICATIONS - YOU MUST COMPLY:
-To allow the application to easily parse and display each module, you MUST output ONLY a valid JSON object. Do not write any conversational markdown or explanation outside the JSON. The JSON structure MUST follow this exact schema:
+INFORMASI CANVAS FITUR:
+${canvasFeaturesFormatted}
+
+ATURAN OUTPUT JSON (WAJIB DIPATUHI):
+1. Anda HARUS mengembalikan HANYA sebuah valid JSON object dengan kunci (keys) persis seperti di bawah ini. JANGAN menulis teks percakapan apa pun di luar JSON!
+2. Setiap nilai (value) di dalam JSON harus berupa prompt markdown lengkap, detail, instruktif, dan siap disalin per modul ke AI coding agent.
+3. Pastikan semua tanda kutip ganda di dalam teks di-escape dengan benar (\\") dan baris baru ditulis sebagai \\n agar JSON valid dan bisa di-parse oleh JSON.parse().
+
+JSON SCHEMA YANG WAJIB DIGUNAKAN:
 {
-  "frontend": "Detailed UI/UX & Frontend specifications. For each page in the inventory, detail its purpose, layout, components, Tailwind styling classes, animations, micro-interactions, responsive behavior, and alt text validations. Provide complete page blueprints so AI coding platforms will build all of them without skipping anything.",
-  "backend": "Detailed Backend System Flow & API Architecture specifications. Detail the complete directory tree structure, absolute file paths, every single API route endpoint (method, request, response schemas, and logic), authentication RBAC middleware flows, and service integrations.",
-  "database": "Pure PostgreSQL SQL Database schemas. Include complete CREATE TABLE DDLs (using UUIDs, proper foreign keys with ON DELETE CASCADE, TIMESTAMPTZ timestamps, CREATE INDEX statements), and robust INSERT statements for initial seeding.",
-  "tasks": "At least 30-45 numbered AI Vibe Coding tasks in exact chronological order for coding agents (Setup -> Database -> Backend -> Frontend -> Integration). List exactly which files to create, what code to write, and what commands to run."
+  "setup": "Markdown prompt untuk modul 01_Project_Setup.md. Instruksikan pembuatan folder tree, package.json, tsconfig, dan instalasi dependencies.",
+  "database": "Markdown prompt untuk modul 02_Database_Migration.md. Berikan instruksi skema tabel PostgreSQL detail dengan kolom, indeks, dan SQL script.",
+  "auth": "Markdown prompt untuk modul 03_Auth_System.md. Instruksikan pembuatan register, login, jwt verify middleware, dan secure password hashing.",
+  "api": "Markdown prompt untuk modul 04_API_Endpoints.md. Instruksikan pembuatan route API lengkap untuk CRUD fitur utama.",
+  "landing": "Markdown prompt untuk modul 05_Landing_Page.md. Instruksikan pembuatan halaman depan/marketing lengkap dengan styles.",
+  "dashboard": "Markdown prompt untuk modul 06_Dashboard.md. Instruksikan pembuatan halaman dashboard admin/user dengan metrics grid.",
+  "crud": "Markdown prompt untuk modul 07_CRUD_Modules.md. Instruksikan pembuatan halaman list, edit form, dan modal hapus data.",
+  "components": "Markdown prompt untuk modul 08_UI_Components.md. Instruksikan pembuatan reusable UI elements (inputs, select, tables, modals).",
+  "testing": "Markdown prompt untuk modul 09_Testing_QA.md. Instruksikan pembuatan unit test dan E2E test scripts.",
+  "deployment": "Markdown prompt untuk modul 10_Deployment.md. Instruksikan pembuatan Dockerfile, docker-compose, dan GitHub Actions CI/CD."
 }
 
-CLAUDE ARTIFACTS / CANVAS & TRUNCATION INSTRUCTIONS:
-- Since you are generating this via the Claude.ai Web Interface, PLEASE GENERATE THIS JSON IN A CLAUDE ARTIFACT (CLAUDE CANVAS) box so it is rendered fully and can be copied easily.
-- If you are about to reach your output token limit, DO NOT truncate the JSON in the middle of a string (which breaks JSON parsing). Instead, pause before the database or tasks key, output valid JSON up to that point, and instruct the user to type "continue" to get the rest of the JSON. Alternatively, write extremely concise but complete code blocks so it fits within one long response window.
+Setiap modul prompt di dalam JSON harus berisi setidaknya 1000 - 2000 kata instruksi teknis yang sangat spesifik, menyertakan contoh struktur file, kode boilerplate, dan perintah terminal yang harus dijalankan. Jangan gunakan placeholder!
 
-VIBE CODING FOCUS INSTRUCTIONS:
-- Think and expand the scope: Propose and integrate advanced modern features (e.g. Analytics dashboards, Role-Based Access Control, Logging & Auditing, Email notifications, Supabase Storage, Export to CSV/PDF, Real-time status updates) to make this application feel complete and premium.
-- Frontend: Detail the exact Tailwind classes, interactive states, animations, loading skeletons, responsive layouts (375px mobile, 768px tablet, 1024px+ desktop), and components.
-- Backend & DB: Write complete SQL DDL commands (including UUIDs, ON DELETE CASCADE, TIMESTAMPTZ timestamps, indexes, seed data), absolute folder structures, precise API endpoints, and middleware.
-- Tasks: Structure them as direct commands for AI agents like Antigravity, Cursor, or Trae (e.g. 'Build file X with this exact logic...', 'Run command Y...').
-
-CRITICAL RULES:
-- You must output ONLY a valid parseable JSON. Do not wrap it in conversational introductory or concluding remarks.
-- Ensure all double-quotes inside string values are properly escaped (\\") and newlines are represented as \\n.
-- The total size of strings across all keys MUST exceed 100,000 characters combined. Write complete, exhaustive code templates, SQL schemas, and component layouts. Be as descriptive, detailed, and complete as humanly possible.`;
+Tulis HANYA valid JSON object tanpa pembungkus markdown (tanpa \`\`\`json).`;
       }
 
       await navigator.clipboard.writeText(promptText);
@@ -241,70 +319,78 @@ CRITICAL RULES:
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl text-foreground">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <span>Bantuan Claude.ai / ChatGPT Collaborator</span>
+      <DialogContent className="max-w-xl text-foreground max-h-[85vh] overflow-y-auto flex flex-col gap-4 p-5">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <span>Claude.ai / ChatGPT Collaborator</span>
           </DialogTitle>
-          <DialogDescription>
-            Jika Anda menemui batas limit API AI pada akun gratis, Anda bisa menghasilkan dokumen ini menggunakan web Claude.ai secara gratis dan menempelkannya kembali ke sini.
+          <DialogDescription className="text-xs">
+            Jika Anda menemui batas limit API AI pada akun gratis, gunakan website Claude.ai secara gratis untuk menghasilkan dokumen lalu tempelkan kembali ke sini.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mt-4 space-y-5">
-          <div className="rounded-lg border border-border bg-muted/30 p-4">
-            <h4 className="text-sm font-semibold mb-2 text-foreground">Langkah 1: Salin Konteks Proyek</h4>
-            <p className="text-xs text-muted-foreground mb-3">
-              Kami akan merangkum seluruh ide, stack teknologi, canvas fitur, dan jawaban wawancara Anda ke dalam sebuah prompt super khusus untuk Claude.
-            </p>
-            <Button
-              onClick={handleCopyPrompt}
-              disabled={loading}
-              className="w-full gap-2 text-primary-foreground"
-              variant={copied ? "secondary" : "default"}
-            >
-              {loading ? (
-                <Loader2 size={15} className="animate-spin" />
-              ) : copied ? (
-                <Check size={15} className="text-emerald-500" />
-              ) : (
-                <Copy size={15} />
-              )}
-              {copied ? "Prompt Tersalin!" : "Salin Prompt Spesifik untuk Claude"}
-            </Button>
+        <div className="space-y-4">
+          {/* Side-by-side Grid for Steps 1 & 2 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-xl border border-border bg-muted/20 p-3 flex flex-col justify-between">
+              <div>
+                <h4 className="text-xs font-bold text-foreground">1. Salin Konteks Proyek</h4>
+                <p className="text-[10px] text-muted-foreground mt-1 leading-normal">
+                  Merangkum seluruh ide, stack teknologi, canvas fitur, dan jawaban wawancara untuk prompt Claude.
+                </p>
+              </div>
+              <Button
+                onClick={handleCopyPrompt}
+                disabled={loading}
+                className="w-full gap-2 text-primary-foreground text-xs mt-3 h-8.5"
+                variant={copied ? "secondary" : "default"}
+              >
+                {loading ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : copied ? (
+                  <Check size={13} className="text-emerald-500" />
+                ) : (
+                  <Copy size={13} />
+                )}
+                {copied ? "Prompt Tersalin!" : "Salin Prompt Claude"}
+              </Button>
+            </div>
+
+            <div className="rounded-xl border border-border bg-muted/20 p-3 flex flex-col justify-between">
+              <div>
+                <h4 className="text-xs font-bold text-foreground">2. Jalankan di Claude.ai</h4>
+                <p className="text-[10px] text-muted-foreground mt-1 leading-normal">
+                  Buka website Claude.ai, tempel prompt yang baru disalin, lalu tunggu AI menuliskan dokumen.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full gap-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5 text-foreground text-xs mt-3 h-8.5"
+                onClick={() => window.open("https://claude.ai", "_blank")}
+              >
+                <ExternalLink size={13} /> Buka Claude.ai
+              </Button>
+            </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-muted/30 p-4">
-            <h4 className="text-sm font-semibold mb-2 text-foreground">Langkah 2: Generate di Claude.ai</h4>
-            <p className="text-xs text-muted-foreground mb-3">
-              Buka website Claude.ai (atau ChatGPT), paste prompt yang baru Anda salin, lalu tunggu AI menuliskan dokumen {docNames[documentType]} untuk Anda.
-            </p>
-            <Button
-              variant="outline"
-              className="w-full gap-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5 text-foreground"
-              onClick={() => window.open("https://claude.ai", "_blank")}
-            >
-              <ExternalLink size={15} /> Buka Claude.ai (Tab Baru)
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-foreground">Langkah 3: Tempel Hasil ke Sini</label>
+          {/* Textarea for Step 3 */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-foreground">3. Tempel Hasil ke Sini</label>
             <Textarea
-              placeholder="Tempelkan hasil markdown yang digenerate oleh Claude ke sini..."
+              placeholder={`Tempelkan hasil markdown/JSON yang digenerate oleh Claude ke sini...`}
               value={manualContent}
               onChange={(e) => setManualContent(e.target.value)}
-              className="h-44 font-sans text-xs leading-relaxed text-foreground bg-background"
+              className="h-28 font-sans text-xs leading-relaxed text-foreground bg-background"
             />
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-border">
-          <Button variant="ghost" onClick={() => setOpen(false)} disabled={loading} className="text-muted-foreground hover:text-foreground">
+        <div className="flex justify-end gap-2 pt-3 border-t border-border mt-1">
+          <Button variant="ghost" size="sm" onClick={() => setOpen(false)} disabled={loading} className="text-muted-foreground hover:text-foreground text-xs">
             Batal
           </Button>
-          <Button onClick={handleSaveManual} disabled={loading || !manualContent.trim()} className="text-primary-foreground">
-            {loading && <Loader2 size={15} className="animate-spin mr-1" />}
+          <Button size="sm" onClick={handleSaveManual} disabled={loading || !manualContent.trim()} className="text-primary-foreground text-xs">
+            {loading && <Loader2 size={13} className="animate-spin mr-1" />}
             Simpan Dokumen & Lanjutkan
           </Button>
         </div>

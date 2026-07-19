@@ -278,8 +278,8 @@ function TasksPage() {
     setGenerating(true);
     try {
       const canvas = await api.projects.getCanvas(projectId).catch(() => null);
-      const blueprintInfo = canvas?.blueprint
-        ? `Pages: ${canvas.blueprint.pages?.map((p: any) => `${p.name} (${p.route})`).join(', ')}. API Endpoints: ${canvas.blueprint.apiEndpoints?.map((e: any) => `${e.method} ${e.path}`).join(', ')}. Tables: ${canvas.blueprint.tables?.map((t: any) => t.name).join(', ')}.`
+      const blueprintInfo = canvas?.features
+        ? `Pages: ${canvas.features.pages?.map((p: any) => `${p.name} (${p.route})`).join(', ')}. API Endpoints: ${canvas.features.apiEndpoints?.map((e: any) => `${e.method} ${e.path}`).join(', ')}. Tables: ${canvas.features.tables?.map((t: any) => t.name).join(', ')}.`
         : "Tidak ada data canvas tersedia";
 
       const provider = localStorage.getItem("active_provider") ?? undefined;
@@ -287,39 +287,66 @@ function TasksPage() {
 
       if (result?.content) {
         try {
+          // Unpack JSON wrapper jika respons dibungkus dalam object content
+          let text = result.content;
+          try {
+            const wrapper = JSON.parse(result.content);
+            if (wrapper && typeof wrapper === 'object' && wrapper.content) {
+              text = wrapper.content;
+            }
+          } catch {}
+
           let parsed;
-          const raw = result.content.replace(/```json/g, '').replace(/```/g, '').trim();
+          const raw = text.replace(/```json/g, '').replace(/```/g, '').trim();
           try { parsed = JSON.parse(raw); } catch {}
 
           if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].title) {
             setTasks(parsed.map((t: any, i: number) => ({ ...t, id: t.id || `ai-${i}-${Date.now()}`, done: false, isAiGenerated: true })));
-            toast.success(`${parsed.length} tasks berhasil digenerate dari canvas!`);
+            toast.success("Tasks berhasil digenerate oleh AI!");
           } else {
-            // Parse markdown-style tasks
-            const lines = raw.split('\n').filter((l: string) => l.trim());
+            // Fallback parsing jika AI menghasilkan format markdown teks list
+            const lines = text.split('\n');
             const aiTasks: Task[] = [];
-            let category: TaskCategory = 'frontend';
+            let currentCategory: TaskCategory = 'backend';
+
             for (const line of lines) {
-              const lower = line.toLowerCase();
-              if (lower.includes('frontend') || lower.includes('ui') || lower.includes('page')) category = 'frontend';
-              else if (lower.includes('backend') || lower.includes('api') || lower.includes('server')) category = 'backend';
-              else if (lower.includes('database') || lower.includes('db') || lower.includes('sql')) category = 'database';
-              else if (lower.includes('config') || lower.includes('setup') || lower.includes('init')) category = 'config';
-              else if (lower.includes('test')) category = 'testing';
-              else if (lower.includes('deploy') || lower.includes('docker')) category = 'deployment';
+              const cleaned = line.trim();
+              if (!cleaned) continue;
+
+              const lower = cleaned.toLowerCase();
+              if (lower.includes('frontend') || lower.includes('halaman') || lower.includes('tampilan')) {
+                currentCategory = 'frontend';
+                continue;
+              } else if (lower.includes('database') || lower.includes('tabel') || lower.includes('migrasi')) {
+                currentCategory = 'database';
+                continue;
+              } else if (lower.includes('backend') || lower.includes('api') || lower.includes('endpoint')) {
+                currentCategory = 'backend';
+                continue;
+              }
 
               const taskMatch = line.match(/^(?:\d+\.|[-*])\s+(.+)/);
               if (taskMatch && taskMatch[1].length > 5) {
-                aiTasks.push({ id: `ai-${aiTasks.length}-${Date.now()}`, title: taskMatch[1].trim(), category, priority: 'medium', done: false, isAiGenerated: true });
+                aiTasks.push({ id: `ai-${aiTasks.length}-${Date.now()}`, title: taskMatch[1].trim(), category: currentCategory, priority: 'medium', done: false, isAiGenerated: true });
               }
             }
-            if (aiTasks.length > 0) { setTasks(aiTasks); toast.success(`${aiTasks.length} tasks digenerate dari AI!`); }
-            else { toast.error("Format respons AI tidak dikenali"); }
+
+            if (aiTasks.length > 0) {
+              setTasks(aiTasks);
+              toast.success(`${aiTasks.length} tasks digenerate dari AI!`);
+            } else {
+              toast.error("Format respons AI tidak dikenali");
+            }
           }
-        } catch { toast.error("Gagal parse respons AI"); }
+        } catch {
+          toast.error("Gagal parse respons AI");
+        }
       }
-    } catch { toast.error("Gagal generate tasks dari AI"); }
-    finally { setGenerating(false); }
+    } catch {
+      toast.error("Gagal generate tasks dari AI");
+    } finally {
+      setGenerating(false);
+    }
   }
 
   const filtered = filterCat === 'all' ? tasks : tasks.filter(t => t.category === filterCat);
