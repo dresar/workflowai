@@ -54,7 +54,7 @@ export async function generateTasks(req: Request, res: Response, next: NextFunct
 
 export async function generatePrompt(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const result = await service.generatePrompt(req.params.projectId as string, getPreferredProvider(req));
+    const result = await service.generatePrompt(req.params.projectId as string, getPreferredProvider(req), req.body?.revisionInstructions);
     sendSuccess(res, result, 'Prompt generated successfully');
   } catch (err) { next(err); }
 }

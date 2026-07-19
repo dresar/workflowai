@@ -71,8 +71,8 @@ export class GenerateService {
     return this.generate(projectId, 'tasks', preferredProvider);
   }
 
-  async generatePrompt(projectId: string, preferredProvider?: string) {
-    return this.generate(projectId, 'prompt', preferredProvider);
+  async generatePrompt(projectId: string, preferredProvider?: string, revisionInstructions?: string) {
+    return this.generate(projectId, 'prompt', preferredProvider, revisionInstructions);
   }
 
   async generateCanvas(projectId: string, preferredProvider?: string, revisionInstructions?: string) {

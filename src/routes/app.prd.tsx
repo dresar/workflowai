@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Check, Loader2, Copy, Download, RefreshCw, FileText, ArrowRight } from "lucide-react";
+import { Check, Loader2, Copy, Download, RefreshCw, FileText, ArrowRight, Cpu, HelpCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { api } from "@/lib/api";
 import { ClaudeCollaboratorModal } from "@/components/claude-collaborator-modal";
@@ -275,6 +276,7 @@ function PRDPage() {
   const [hasNoPrd, setHasNoPrd] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [savingDb, setSavingDb] = useState(false);
+  const [showPromptChoiceModal, setShowPromptChoiceModal] = useState(false);
 
   useEffect(() => {
     if (!projectId) {
@@ -283,6 +285,7 @@ function PRDPage() {
     }
 
     async function loadPRD() {
+      if (!projectId) return;
       try {
         // 1. Coba load dari localStorage
         const local = localStorage.getItem(`prd_content_${projectId}`);
@@ -450,9 +453,9 @@ function PRDPage() {
             </>
           )}
           <ClaudeCollaboratorModal projectId={projectId || ""} documentType="prd" onSaveSuccess={(newContent) => { setContent(newContent); setHasNoPrd(false); }} />
-          <Button onClick={handleProceedToPrompting} disabled={hasNoPrd || savingDb} size="sm" className="text-[11px] h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white">
+          <Button onClick={() => setShowPromptChoiceModal(true)} disabled={hasNoPrd || savingDb} size="sm" className="text-[11px] h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white">
             {savingDb ? <Loader2 size={12} className="animate-spin" /> : null}
-            Blueprint Selesai → Generate Prompt <ArrowRight size={12} />
+            Blueprint Selesai → Buat Prompts <ArrowRight size={12} />
           </Button>
         </div>
       </div>
@@ -503,6 +506,84 @@ function PRDPage() {
           )}
         </div>
       </div>
+
+      {/* Choice Modal for Generating Prompt */}
+      <Dialog open={showPromptChoiceModal} onOpenChange={setShowPromptChoiceModal}>
+        <DialogContent className="max-w-md text-slate-100 bg-[#0c1017] border border-slate-800 p-5">
+          <DialogHeader className="space-y-1.5">
+            <DialogTitle className="text-sm font-bold flex items-center gap-1.5 text-indigo-400">
+              <Sparkles size={16} /> Pilih Metode Generate Prompting
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-400">
+              Bagaimana Anda ingin menghasilkan 10 modul prompt untuk AI Coding Agent?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 gap-3 py-3">
+            {/* Option 1: AI Otomatis */}
+            <button
+              onClick={async () => {
+                setShowPromptChoiceModal(false);
+                setSavingDb(true);
+                const saveToast = toast.loading("Menyimpan blueprint ke database...");
+                try {
+                  await api.projects.saveDocumentManual(projectId!, "prd", { content });
+                  toast.success("Blueprint disimpan! Memulai generate otomatis...", { id: saveToast });
+                  localStorage.setItem("auto_trigger_prompt_gen", "true");
+                  navigate({ to: "/app/prompt" });
+                } catch {
+                  toast.error("Gagal menyimpan ke database", { id: saveToast });
+                } finally {
+                  setSavingDb(false);
+                }
+              }}
+              className="text-left p-3.5 rounded-xl border border-indigo-700/20 bg-indigo-950/20 hover:bg-indigo-950/40 hover:border-indigo-600/40 transition-all flex items-start gap-3 group"
+            >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white mt-0.5 group-hover:scale-105 transition-transform">
+                <Cpu size={15} />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-indigo-300">Generate dengan AI (Otomatis)</h4>
+                <p className="text-[10px] text-slate-400 mt-1 leading-normal">
+                  Gunakan AI internal (Gemini/Groq) untuk langsung meng-generate 10 modul prompt secara berurutan.
+                </p>
+              </div>
+            </button>
+
+            {/* Option 2: Claude Manual */}
+            <div className="relative">
+              <ClaudeCollaboratorModal
+                projectId={projectId || ""}
+                documentType="prompt"
+                onSaveSuccess={() => {
+                  setShowPromptChoiceModal(false);
+                  toast.success("JSON 10 prompt berhasil disimpan. Navigasi ke Prompts...");
+                  navigate({ to: "/app/prompt" });
+                }}
+                triggerButton={
+                  <button className="w-full text-left p-3.5 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-800/50 hover:border-slate-700 transition-all flex items-start gap-3 group">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white mt-0.5 group-hover:scale-105 transition-transform">
+                      <HelpCircle size={15} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-emerald-400">Gunakan Bantuan Claude.ai (Manual - Rekomendasi)</h4>
+                      <p className="text-[10px] text-slate-400 mt-1 leading-normal">
+                        Salin konteks proyek lengkap untuk Claude.ai web, generate JSON 10 modul prompt bebas limit, lalu tempel hasilnya di sini.
+                      </p>
+                    </div>
+                  </button>
+                }
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-3 border-t border-slate-800">
+            <Button variant="ghost" size="sm" onClick={() => setShowPromptChoiceModal(false)} className="text-xs text-slate-500 hover:text-slate-300">
+              Batal
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

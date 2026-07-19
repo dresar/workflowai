@@ -104,6 +104,32 @@ ${answers.map((a: any) => `Q: ${a.question ?? a.questionId}\nA: ${JSON.stringify
 FEATURE CANVAS / SPECIFICATIONS:
 ${canvasFeaturesFormatted}
 
+=== PANDUAN REKAYASA PROMPT LENGKAP & ANTI-NGAWUR (PENTING) ===
+Untuk memastikan Anda (Claude) menghasilkan dokumen Blueprint / Spesifikasi yang super presisi, bebas dari halusinasi, dan tidak menuliskan kode secara asal (lazy coding), Anda WAJIB mematuhi instruksi berikut:
+
+1. ATURAN PENYELARASAN DESAIN & BERPIKIR KRITIS (CRITICAL THINKING RULES):
+   - JANGAN PERNAH MENULIS PERINGATAN, CATATAN KEBERATAN, ATAU MENGELUH TENTANG KETIDAKSESUAIAN FITUR CANVAS DENGAN IDE PROYEK.
+   - Pikirkan dan analisis secara mendalam: Anda diberikan data Ide Proyek ("${project.name}"), Deskripsi Proyek ("${project.description || '-'}"), Jawaban Wawancara, serta Canvas Fitur yang terlampir. Hubungkan seluruh data tersebut secara cerdas.
+   - Jika terdapat perbedaan atau konflik antara Canvas Fitur dengan deskripsi ide proyek, gunakan keahlian arsitektur Anda untuk mengambil keputusan desain terbaik. Selaraskan komponen canvas agar relevan dan logis dengan tujuan utama proyek "${project.name}". Rancang skema database, endpoint API, dan alur halaman yang paling efisien, aman, dan berkinerja tinggi untuk jenis aplikasi ini tanpa ada bagian yang terpotong.
+
+2. DESAIN SISTEM YANG LENGKAP & JELAS (NO PLACEHOLDERS):
+   - JANGAN PERNAH menulis komentar seperti "// TODO: lengkapi nanti" atau "// kode logika Anda di sini...". AI Coding Agent butuh kode/logika yang utuh. Tulis seluruh kerangka logika, penanganan error, schema tipe data, dan alur logic secara eksplisit dan tuntas.
+   
+3. STRUKTUR ENDPOINT & MAPPING SCHEMA API:
+   - Setiap endpoint harus memiliki format JSON Request Body dan Response Body (Success & Error status) yang valid dan tertulis secara literal. Sertakan property types (e.g., string, uuid, boolean, array, integer) secara jelas.
+   - Cantumkan juga middleware apa yang memproteksi endpoint tersebut (contoh: AuthMiddleware, RequireRoleAdmin, dsb).
+
+4. DESAIN DATABASE POSTGRESQL RELASIONAL:
+   - Gunakan skema database DDL SQL murni PostgreSQL. Gunakan primary key berbasis UUID (contoh: id UUID PRIMARY KEY DEFAULT gen_random_uuid()), foreign key relasional yang memiliki kekangan ON DELETE CASCADE / SET NULL, kolom penanda waktu (created_at TIMESTAMPTZ DEFAULT NOW()), dan buatlah indeks (CREATE INDEX) pada kolom foreign key atau kolom filter.
+   - JANGAN campurkan sintaks PostgreSQL dengan database lain (seperti MySQL atau MongoDB).
+
+5. PERSYARATAN FRONTEND & UI/UX YANG UTUH:
+   - Jabarkan setiap halaman secara visual dan fungsional: sebutkan layout utamanya, visual state (loading skeleton, modal alert, form validation), interaksi mikro (hover transitions, active clicks), serta nama-nama component pembentuk halaman tersebut.
+
+6. VERIFIKASI PEMAKAIAN STACK TEKNOLOGI:
+   - Pastikan spesifikasi teknis diselaraskan dengan teknologi stack yang dipilih oleh pengguna di atas.
+
+
 EXISTING DOCUMENTS:
 ${Object.entries(docs)
   .map(([key, content]) => `--- EXISTING ${key.toUpperCase()} ---\n${String(content)}`)
@@ -219,38 +245,44 @@ Kategori yang valid: "setup", "database", "backend", "frontend", "infra", "testi
 Output hanya list task dalam format JSON array (atau Markdown list) tanpa ada teks pembuka atau penutup lainnya.`;
       } else if (documentType === "prompt") {
         promptText += `
-=== INSTRUKSI GENERATE 10 MODUL AI CODING PROMPTS ===
+=== INSTRUKSI GENERATE FOLDER & FILE WORKSPACE AI PROMPTS ===
 Peran Anda: Principal Prompt Engineer dan Tech Lead.
-Tugas Anda adalah menghasilkan payload JSON lengkap berisi 10 prompt terstruktur dan modular untuk membangun aplikasi "${project.name}" (Ide: "${project.idea}").
+Tugas Anda adalah menghasilkan struktur folder dan file prompt lengkap berisi instruksi modular dan aturan sistem untuk membangun aplikasi "${project.name}" (Ide: "${project.idea}").
 
 STACK TEKNOLOGI YANG DIGUNAKAN:
 ${techs.map((t: any) => `- ${t.category}: ${t.technologyName}`).join("\n")}
 
-INFORMASI CANVAS FITUR:
+INFORMASI CANVAS FITUR DAN TARGET WORKFLOW:
 ${canvasFeaturesFormatted}
 
 ATURAN OUTPUT JSON (WAJIB DIPATUHI):
-1. Anda HARUS mengembalikan HANYA sebuah valid JSON object dengan kunci (keys) persis seperti di bawah ini. JANGAN menulis teks percakapan apa pun di luar JSON!
-2. Setiap nilai (value) di dalam JSON harus berupa prompt markdown lengkap, detail, instruktif, dan siap disalin per modul ke AI coding agent.
+1. Anda HARUS mengembalikan HANYA sebuah valid JSON object dengan key berbentuk "Nama_Folder/Nama_File.ext" (contoh: "01_Project_Setup/01_Project_Setup.md", "01_Project_Setup/.cursorrules", "02_Database_Migration/schema.sql") dan value berupa konten teks dari file tersebut. JANGAN menulis teks percakapan apa pun di luar JSON!
+2. Setiap isi file prompt harus sangat detail (1000 - 2000 kata per file utama), spesifik untuk arsitektur project, memberikan template kode lengkap tanpa placeholder, serta perintah command-line yang relevan.
 3. Pastikan semua tanda kutip ganda di dalam teks di-escape dengan benar (\\") dan baris baru ditulis sebagai \\n agar JSON valid dan bisa di-parse oleh JSON.parse().
+4. Tulis HANYA valid JSON object tanpa pembungkus markdown (tanpa \`\`\`json).
 
-JSON SCHEMA YANG WAJIB DIGUNAKAN:
+STRUKTUR FOLDER DEFAULT YANG HARUS ANDA GENERATE (Anda boleh menambahkan file/folder baru yang relevan):
+- "01_Project_Setup/01_Project_Setup.md" (Instruksi setup project)
+- "01_Project_Setup/.cursorrules" (AI Agent rules untuk project ini)
+- "02_Database_Migration/02_Database_Migration.md" (Instruksi Drizzle migrations)
+- "02_Database_Migration/schema.sql" (DDL SQL schema lengkap untuk PostgreSQL)
+- "03_Auth_System/03_Auth_System.md" (Instruksi autentikasi register/login/middleware)
+- "04_API_Endpoints/04_API_Endpoints.md" (Instruksi endpoint routes & controllers)
+- "05_Landing_Page/05_Landing_Page.md" (Instruksi UI landing marketing)
+- "06_Dashboard/06_Dashboard.md" (Instruksi UI dashboard admin/user)
+- "07_CRUD_Modules/07_CRUD_Modules.md" (Instruksi UI CRUD items)
+- "08_UI_Components/08_UI_Components.md" (Instruksi reusable component library)
+- "09_Testing_QA/09_Testing_QA.md" (Instruksi unit testing & E2E)
+- "10_Deployment_DevOps/10_Deployment.md" (Instruksi build & production deployment)
+- "10_Deployment_DevOps/Dockerfile" (Production Dockerfile config)
+- "10_Deployment_DevOps/docker-compose.yml" (Development/Production docker-compose service config)
+
+Contoh struktur JSON output:
 {
-  "setup": "Markdown prompt untuk modul 01_Project_Setup.md. Instruksikan pembuatan folder tree, package.json, tsconfig, dan instalasi dependencies.",
-  "database": "Markdown prompt untuk modul 02_Database_Migration.md. Berikan instruksi skema tabel PostgreSQL detail dengan kolom, indeks, dan SQL script.",
-  "auth": "Markdown prompt untuk modul 03_Auth_System.md. Instruksikan pembuatan register, login, jwt verify middleware, dan secure password hashing.",
-  "api": "Markdown prompt untuk modul 04_API_Endpoints.md. Instruksikan pembuatan route API lengkap untuk CRUD fitur utama.",
-  "landing": "Markdown prompt untuk modul 05_Landing_Page.md. Instruksikan pembuatan halaman depan/marketing lengkap dengan styles.",
-  "dashboard": "Markdown prompt untuk modul 06_Dashboard.md. Instruksikan pembuatan halaman dashboard admin/user dengan metrics grid.",
-  "crud": "Markdown prompt untuk modul 07_CRUD_Modules.md. Instruksikan pembuatan halaman list, edit form, dan modal hapus data.",
-  "components": "Markdown prompt untuk modul 08_UI_Components.md. Instruksikan pembuatan reusable UI elements (inputs, select, tables, modals).",
-  "testing": "Markdown prompt untuk modul 09_Testing_QA.md. Instruksikan pembuatan unit test dan E2E test scripts.",
-  "deployment": "Markdown prompt untuk modul 10_Deployment.md. Instruksikan pembuatan Dockerfile, docker-compose, dan GitHub Actions CI/CD."
-}
-
-Setiap modul prompt di dalam JSON harus berisi setidaknya 1000 - 2000 kata instruksi teknis yang sangat spesifik, menyertakan contoh struktur file, kode boilerplate, dan perintah terminal yang harus dijalankan. Jangan gunakan placeholder!
-
-Tulis HANYA valid JSON object tanpa pembungkus markdown (tanpa \`\`\`json).`;
+  "01_Project_Setup/01_Project_Setup.md": "# Project Setup...",
+  "01_Project_Setup/.cursorrules": "You are an expert...",
+  "02_Database_Migration/schema.sql": "CREATE TABLE users..."
+}`;
       }
 
       await navigator.clipboard.writeText(promptText);

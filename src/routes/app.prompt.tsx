@@ -6,112 +6,236 @@ import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import JSZip from "jszip";
+import { ClaudeCollaboratorModal } from "@/components/claude-collaborator-modal";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/app/prompt")({ component: PromptPage });
 
 // ============================================================
-// TYPES
+// TYPES FOR DYNAMIC WORKSPACE
 // ============================================================
+interface PromptFile {
+  id: string;
+  name: string;
+  description: string;
+  content: string;
+}
+
 interface PromptModule {
   id: string;
-  number: string;     // "01", "02", ...
+  number: string;
   title: string;
   description: string;
-  icon: Lucide.LucideIcon;
-  iconCls: string;
-  content: string;    // the generated prompt text
-  filename: string;   // filename inside zip
-  category: 'setup' | 'backend' | 'frontend' | 'infra';
+  filename: string;
+}
+
+interface PromptFolder {
+  id: string;
+  name: string;
+  description: string;
+  files: PromptFile[];
 }
 
 // ============================================================
-// 10 PROMPT TEMPLATES
+// 10 DEFAULT FOLDERS & FILES BUILDER
 // ============================================================
-function buildDefaultModules(): PromptModule[] {
-  return [
+function buildDefaultFolders(projectName: string, techStack: string[], blueprintInfo: string, tasksInfo: string, prdInfo: string): PromptFolder[] {
+  const techLine = techStack.join(', ') || 'React, TypeScript, Node.js, PostgreSQL, Tailwind CSS';
+  const folders: PromptFolder[] = [
     {
-      id: 'setup', number: '01', title: 'Project Setup & Structure',
-      description: 'Inisialisasi repo, konfigurasi TypeScript, ESLint, folder structure, dan dependencies',
-      icon: Lucide.FolderOpen, iconCls: 'text-slate-400 bg-slate-800 border-slate-700',
-      content: '', filename: '01_Project_Setup.md', category: 'setup',
+      id: 'f_setup', name: '01_Project_Setup', description: 'Setup, inisialisasi folder, dan rules konfigurasi',
+      files: [
+        {
+          id: 'file_setup_prompt',
+          name: '01_Project_Setup.md',
+          description: 'Instruksi setup project utama',
+          content: generatePromptContent({ id: 'setup', number: '01', title: 'Project Setup & Structure', description: '', filename: '01_Project_Setup.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
+        },
+        {
+          id: 'file_cursorrules',
+          name: '.cursorrules',
+          description: 'Sistem rules AI Agent',
+          content: `You are an expert full-stack developer building ${projectName}.
+
+## Tech Stack
+${techLine}
+
+## Code Style Rules
+1. Always use TypeScript strict mode.
+2. Maintain modular file architecture.
+3. Handle error exceptions cleanly.
+4. JANGAN gunakan placeholder. Tulis kode fungsional penuh.`,
+        }
+      ]
     },
     {
-      id: 'database', number: '02', title: 'Database Schema & Migration',
-      description: 'SQL schema lengkap, Drizzle ORM setup, migration pertama, dan seed data',
-      icon: Lucide.Database, iconCls: 'text-emerald-400 bg-emerald-950/50 border-emerald-800',
-      content: '', filename: '02_Database_Migration.md', category: 'backend',
+      id: 'f_database', name: '02_Database_Migration', description: 'Skema database PostgreSQL, Drizzle ORM, dan seed data',
+      files: [
+        {
+          id: 'file_db_prompt',
+          name: '02_Database_Migration.md',
+          description: 'Instruksi Drizzle migration',
+          content: generatePromptContent({ id: 'database', number: '02', title: 'Database Schema & Migration', description: '', filename: '02_Database_Migration.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
+        },
+        {
+          id: 'file_db_schema',
+          name: 'schema.sql',
+          description: 'SQL DDL schema murni',
+          content: '-- PostgreSQL SQL DDL schema\n-- Silakan generate dari AI atau tulis di sini.',
+        }
+      ]
     },
     {
-      id: 'auth', number: '03', title: 'Authentication System',
-      description: 'Implementasi login, register, JWT token, refresh token, dan auth middleware',
-      icon: Lucide.Lock, iconCls: 'text-amber-400 bg-amber-950/50 border-amber-800',
-      content: '', filename: '03_Auth_System.md', category: 'backend',
+      id: 'f_auth', name: '03_Auth_System', description: 'Autentikasi register, login, JWT token, dan auth middleware',
+      files: [
+        {
+          id: 'file_auth_prompt',
+          name: '03_Auth_System.md',
+          description: 'Instruksi pembuatan Auth system',
+          content: generatePromptContent({ id: 'auth', number: '03', title: 'Authentication System', description: '', filename: '03_Auth_System.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
+        }
+      ]
     },
     {
-      id: 'api', number: '04', title: 'Core API Endpoints',
-      description: 'REST API routes, controllers, validasi input, dan error handling',
-      icon: Lucide.Server, iconCls: 'text-sky-400 bg-sky-950/50 border-sky-800',
-      content: '', filename: '04_API_Endpoints.md', category: 'backend',
+      id: 'f_api', name: '04_API_Endpoints', description: 'API routes, controller, validasi Zod, dan standard error handling',
+      files: [
+        {
+          id: 'file_api_prompt',
+          name: '04_API_Endpoints.md',
+          description: 'Instruksi core API routes',
+          content: generatePromptContent({ id: 'api', number: '04', title: 'Core API Endpoints', description: '', filename: '04_API_Endpoints.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
+        }
+      ]
     },
     {
-      id: 'landing', number: '05', title: 'Landing Page & Marketing',
-      description: 'Halaman landing: hero, features, pricing, testimonial, dan CTA section',
-      icon: Lucide.Globe, iconCls: 'text-violet-400 bg-violet-950/50 border-violet-800',
-      content: '', filename: '05_Landing_Page.md', category: 'frontend',
+      id: 'f_landing', name: '05_Landing_Page', description: 'Tampilan marketing landing page responsive',
+      files: [
+        {
+          id: 'file_landing_prompt',
+          name: '05_Landing_Page.md',
+          description: 'Instruksi Landing page',
+          content: generatePromptContent({ id: 'landing', number: '05', title: 'Landing Page & Marketing', description: '', filename: '05_Landing_Page.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
+        }
+      ]
     },
     {
-      id: 'dashboard', number: '06', title: 'Dashboard & Analytics',
-      description: 'Dashboard utama dengan KPI cards, chart, activity feed, dan quick actions',
-      icon: Lucide.LayoutDashboard, iconCls: 'text-indigo-400 bg-indigo-950/50 border-indigo-800',
-      content: '', filename: '06_Dashboard.md', category: 'frontend',
+      id: 'f_dashboard', name: '06_Dashboard', description: 'Halaman dashboard internal user/admin, widget KPI, dan charts',
+      files: [
+        {
+          id: 'file_dashboard_prompt',
+          name: '06_Dashboard.md',
+          description: 'Instruksi Dashboard UI',
+          content: generatePromptContent({ id: 'dashboard', number: '06', title: 'Dashboard & Analytics', description: '', filename: '06_Dashboard.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
+        }
+      ]
     },
     {
-      id: 'crud', number: '07', title: 'Core CRUD Modules',
-      description: 'Halaman list dengan search/filter, form create/edit, dan delete confirmation',
-      icon: Lucide.Table2, iconCls: 'text-teal-400 bg-teal-950/50 border-teal-800',
-      content: '', filename: '07_CRUD_Modules.md', category: 'frontend',
+      id: 'f_crud', name: '07_CRUD_Modules', description: 'Modul halaman list data, form entri, edit, dan delete confirmation',
+      files: [
+        {
+          id: 'file_crud_prompt',
+          name: '07_CRUD_Modules.md',
+          description: 'Instruksi CRUD core modules',
+          content: generatePromptContent({ id: 'crud', number: '07', title: 'Core CRUD Modules', description: '', filename: '07_CRUD_Modules.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
+        }
+      ]
     },
     {
-      id: 'components', number: '08', title: 'UI Component Library',
-      description: 'Reusable components: buttons, modals, forms, tables, cards, dan navigasi',
-      icon: Lucide.Boxes, iconCls: 'text-pink-400 bg-pink-950/50 border-pink-800',
-      content: '', filename: '08_UI_Components.md', category: 'frontend',
+      id: 'f_components', name: '08_UI_Components', description: 'Reusable UI elements, form elements, dialog, dan tables',
+      files: [
+        {
+          id: 'file_components_prompt',
+          name: '08_UI_Components.md',
+          description: 'Instruksi UI library components',
+          content: generatePromptContent({ id: 'components', number: '08', title: 'UI Component Library', description: '', filename: '08_UI_Components.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
+        }
+      ]
     },
     {
-      id: 'testing', number: '09', title: 'Testing & Quality Assurance',
-      description: 'Unit test dengan Vitest, E2E test dengan Playwright, dan CI pipeline',
-      icon: Lucide.TestTube2, iconCls: 'text-rose-400 bg-rose-950/50 border-rose-800',
-      content: '', filename: '09_Testing_QA.md', category: 'infra',
+      id: 'f_testing', name: '09_Testing_QA', description: 'Setup unit testing (Vitest) dan E2E testing (Playwright)',
+      files: [
+        {
+          id: 'file_testing_prompt',
+          name: '09_Testing_QA.md',
+          description: 'Instruksi testing QA',
+          content: generatePromptContent({ id: 'testing', number: '09', title: 'Testing & Quality Assurance', description: '', filename: '09_Testing_QA.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
+        }
+      ]
     },
     {
-      id: 'deployment', number: '10', title: 'Deployment & DevOps',
-      description: 'Dockerfile, docker-compose, CI/CD dengan GitHub Actions, dan production config',
-      icon: Lucide.Rocket, iconCls: 'text-orange-400 bg-orange-950/50 border-orange-800',
-      content: '', filename: '10_Deployment.md', category: 'infra',
-    },
+      id: 'f_deployment', name: '10_Deployment_DevOps', description: 'Dockerization, script docker-compose, dan GitHub Actions CI/CD',
+      files: [
+        {
+          id: 'file_deploy_prompt',
+          name: '10_Deployment.md',
+          description: 'Instruksi deployment & DevOps',
+          content: generatePromptContent({ id: 'deployment', number: '10', title: 'Deployment & DevOps', description: '', filename: '10_Deployment.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
+        },
+        {
+          id: 'file_dockerfile',
+          name: 'Dockerfile',
+          description: 'Docker build definition',
+          content: `FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]`,
+        }
+      ]
+    }
   ];
+  return folders;
 }
 
 // ============================================================
 // GENERATE PROMPT CONTENT PER MODULE
 // ============================================================
-function generatePromptContent(module: PromptModule, projectName: string, techStack: string[], blueprintInfo: string, tasksInfo: string): string {
+function generatePromptContent(module: PromptModule, projectName: string, techStack: string[], blueprintInfo: string, tasksInfo: string, prdInfo: string): string {
   const techLine = techStack.join(', ') || 'React, TypeScript, Node.js, PostgreSQL, Tailwind CSS';
+  
+  // Unpack PRD content jika berupa JSON string
+  let cleanPrd = prdInfo;
+  try {
+    const wrapper = JSON.parse(prdInfo);
+    if (wrapper && typeof wrapper === 'object' && wrapper.content) {
+      cleanPrd = wrapper.content;
+    }
+  } catch {}
+
   const header = `# ${module.number}. ${module.title}
 ## Project: ${projectName}
 ## Tech Stack: ${techLine}
+
+=== ATURAN LINGKUP & PENCEGAHAN HALUSINASI (SCOPE CONTROL RULES) ===
+1. LINGKUP MODUL: Fokus HANYA untuk membuat kode dan berkas yang relevan dengan modul "${module.title}". JANGAN membuat fitur di luar spesifikasi Blueprint, Tasks, atau dokumen PRD.
+2. LARANGAN HALUSINASI: Jangan berasumsi atau membuat fitur fungsional tambahan jika tidak tertulis eksplisit di PRD. Jauhkan dari penambahan dependensi baru tanpa persetujuan.
+3. BEBAS PLACEHOLDER: Jangan menulis kode secara asal, terpotong, atau menuliskan komentar "// TODO: implementasi". Tulis kode yang fully functional dan production-ready.
+4. KONSISTENSI STACK: Patuhi stack teknologi pilihan (${techLine}) secara murni.
 
 ---
 
 `;
 
-  const contextBlock = blueprintInfo ? `## Context dari Blueprint Aplikasi
-
+  const canvasBlock = blueprintInfo ? `## Context dari Canvas Blueprint
 ${blueprintInfo}
 
 ---
 
 ` : '';
+
+  const prdBlock = cleanPrd ? `## Dokumen Spesifikasi PRD Proyek (Requirement Utama)
+${cleanPrd.slice(0, 6000)}
+
+---
+
+` : '';
+
+  const contextBlock = `${canvasBlock}${prdBlock}`;
 
   const contentMap: Record<string, string> = {
     setup: `${header}${contextBlock}## Instruksi untuk AI Coding Agent (Cursor/Copilot)
@@ -622,10 +746,22 @@ function PromptPage() {
   const navigate = useNavigate();
   const [projectName, setProjectName] = useState("Proyek Aplikasi");
   const [techStack, setTechStack] = useState<string[]>([]);
-  const [modules, setModules] = useState<PromptModule[]>(buildDefaultModules());
-  const [activeId, setActiveId] = useState('setup');
+  const [folders, setFolders] = useState<PromptFolder[]>([]);
+  const [activeFolderId, setActiveFolderId] = useState<string>('f_setup');
+  const [activeFileId, setActiveFileId] = useState<string | null>('file_setup_prompt');
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({ 'f_setup': true });
+  const [editMode, setEditMode] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [downloadingZip, setDownloadingZip] = useState(false);
+  const [generatingActive, setGeneratingActive] = useState(false);
+
+  async function savePromptsToDb(targetFolders: PromptFolder[]) {
+    const projectId = localStorage.getItem("active_project_id");
+    if (!projectId) return;
+    try {
+      await api.projects.saveDocumentManual(projectId, "prompt", { content: JSON.stringify(targetFolders) });
+    } catch {}
+  }
 
   useEffect(() => {
     const projectId = localStorage.getItem("active_project_id");
@@ -635,22 +771,49 @@ function PromptPage() {
       api.projects.getTechnologies(projectId).catch(() => null),
       api.projects.getCanvas(projectId).catch(() => null),
       api.projects.getDocumentByType(projectId, "tasks").catch(() => null),
-    ]).then(([proj, techs, canvas, tasksDoc]) => {
+      api.projects.getDocumentByType(projectId, "prd").catch(() => null),
+      api.projects.getDocumentByType(projectId, "prompt").catch(() => null),
+    ]).then(([proj, techs, canvas, tasksDoc, prdDoc, promptDoc]) => {
       const name = proj?.name || "Proyek Aplikasi";
       const tech = techs?.map((t: any) => t.technologyName) || [];
       const blueprintInfo = canvas?.features
         ? `Halaman: ${canvas.features.pages?.map((p: any) => `${p.name} (${p.route})`).join(', ')}. API: ${canvas.features.apiEndpoints?.map((e: any) => `${e.method} ${e.path}`).join(', ')}. Tabel: ${canvas.features.tables?.map((t: any) => t.name).join(', ')}.`
         : '';
       const tasksInfo = tasksDoc?.content || '';
+      const prdInfo = prdDoc?.content || '';
 
       setProjectName(name);
       setTechStack(tech);
 
-      // Pre-generate all module contents
-      setModules(buildDefaultModules().map(mod => ({
-        ...mod,
-        content: generatePromptContent(mod, name, tech, blueprintInfo, tasksInfo),
-      })));
+      // Coba load data prompt yang tersimpan di DB
+      let initialFolders: PromptFolder[] = [];
+      if (promptDoc?.content) {
+        try {
+          const parsed = JSON.parse(promptDoc.content);
+          if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].files) {
+            initialFolders = parsed;
+          }
+        } catch {}
+      }
+
+      // Jika data DB kosong, inisialisasi dengan default folders
+      if (initialFolders.length === 0) {
+        initialFolders = buildDefaultFolders(name, tech, blueprintInfo, tasksInfo, prdInfo);
+        // Simpan inisialisasi default ke DB agar konsisten
+        api.projects.saveDocumentManual(projectId, "prompt", { content: JSON.stringify(initialFolders) }).catch(() => {});
+      }
+
+      setFolders(initialFolders);
+
+      // Auto-trigger AI generate jika datang dari Blueprint page
+      const autoGen = localStorage.getItem("auto_trigger_prompt_gen");
+      if (autoGen === "true") {
+        localStorage.removeItem("auto_trigger_prompt_gen");
+        // Trigger generate all setelah set state selesai
+        setTimeout(() => {
+          handleGenerateAll();
+        }, 800);
+      }
     });
   }, []);
 
@@ -658,24 +821,97 @@ function PromptPage() {
     const projectId = localStorage.getItem("active_project_id");
     if (!projectId) { toast.error("Tidak ada project aktif"); return; }
     setGenerating(true);
+    const genToast = toast.loading("AI sedang men-generate modul prompt...");
     try {
       const provider = localStorage.getItem("active_provider") ?? undefined;
       const result = await api.generate.prompt(projectId, { provider });
       if (result?.content) {
-        const raw = result.content.replace(/```json/g, '').replace(/```/g, '').trim();
+        // Unpack JSON wrapper jika respons dibungkus dalam object content
+        let text = result.content;
+        try {
+          const wrapper = JSON.parse(result.content);
+          if (wrapper && typeof wrapper === 'object' && wrapper.content) {
+            text = wrapper.content;
+          }
+        } catch {}
+
+        const raw = text.replace(/```json/g, '').replace(/```/g, '').trim();
         try {
           const parsed = JSON.parse(raw);
-          if (typeof parsed === 'object') {
-            setModules(prev => prev.map(mod => ({
-              ...mod,
-              content: parsed[mod.id] || mod.content,
-            })));
-            toast.success("Semua 10 prompt berhasil digenerate oleh AI!");
+          if (parsed && typeof parsed === 'object') {
+            const updated = folders.map(folder => ({
+              ...folder,
+              files: folder.files.map(file => {
+                let matchedContent = file.content;
+                Object.entries(parsed).forEach(([key, val]) => {
+                  if (file.id.includes(key) || file.name.toLowerCase().includes(key.toLowerCase())) {
+                    matchedContent = val as string;
+                  }
+                });
+                return { ...file, content: matchedContent };
+              })
+            }));
+            setFolders(updated);
+            await savePromptsToDb(updated);
+            toast.success("Semua prompt berhasil digenerate oleh AI!", { id: genToast });
+          } else {
+            toast.error("Format JSON AI tidak valid", { id: genToast });
           }
-        } catch { toast.info("Prompt digenerate — menggunakan template yang ada"); }
+        } catch {
+          toast.error("Gagal memproses JSON respons AI", { id: genToast });
+        }
       }
-    } catch { toast.error("Gagal generate prompt dari AI"); }
-    finally { setGenerating(false); }
+    } catch { 
+      toast.error("Gagal generate prompt dari AI", { id: genToast }); 
+    } finally { 
+      setGenerating(false); 
+    }
+  }
+
+  async function handleGenerateActive() {
+    const projectId = localStorage.getItem("active_project_id");
+    if (!projectId) { toast.error("Tidak ada project aktif"); return; }
+    const activeFile = folders.flatMap(f => f.files).find(f => f.id === activeFileId);
+    const activeFolder = folders.find(f => f.id === activeFolderId);
+    if (!activeFile || !activeFolder) { toast.error("Pilih file prompt terlebih dahulu"); return; }
+    
+    setGeneratingActive(true);
+    const modToast = toast.loading(`AI sedang menyusun prompt untuk "${activeFile.name}"...`);
+    try {
+      const provider = localStorage.getItem("active_provider") ?? undefined;
+      const result = await api.generate.prompt(projectId, { 
+        provider, 
+        revisionInstructions: `INSTRUKSI MANDAT: Hasilkan HANYA instruksi prompt spesifik dan detail untuk file "${activeFile.name}" (Modul Folder: "${activeFolder.name}"). Jangan hasilkan modul lain. Tulis konten prompt file ini langsung dalam format markdown murni tanpa dibungkus objek JSON atau block code JSON.`
+      });
+      
+      if (result?.content) {
+        let cleanText = result.content;
+        try {
+          const wrapper = JSON.parse(result.content);
+          if (wrapper && typeof wrapper === 'object') {
+            cleanText = wrapper.content || wrapper[activeFile.id] || result.content;
+          }
+        } catch {}
+
+        // Remove any enclosing backticks if AI formatted as markdown code block
+        if (cleanText.startsWith("```markdown")) cleanText = cleanText.substring(11);
+        if (cleanText.startsWith("```")) cleanText = cleanText.substring(3);
+        if (cleanText.endsWith("```")) cleanText = cleanText.substring(0, cleanText.length - 3);
+        cleanText = cleanText.trim();
+
+        const updated = folders.map(f => ({
+          ...f,
+          files: f.files.map(file => file.id === activeFileId ? { ...file, content: cleanText } : file)
+        }));
+        setFolders(updated);
+        await savePromptsToDb(updated);
+        toast.success(`Prompt "${activeFile.name}" berhasil di-generate!`, { id: modToast });
+      }
+    } catch {
+      toast.error(`Gagal generate prompt "${activeFile.name}"`, { id: modToast });
+    } finally {
+      setGeneratingActive(false);
+    }
   }
 
   async function downloadZIP() {
@@ -686,9 +922,12 @@ function PromptPage() {
       const rootFolder = zip.folder(`${safeProjectName}_Prompts`)!;
       const rulesFolder = rootFolder.folder('rules')!;
 
-      // 10 prompt files
-      modules.forEach(mod => {
-        rootFolder.file(mod.filename, mod.content || `# ${mod.title}\n\nPrompt ini belum digenerate. Klik "Generate Semua" terlebih dahulu.`);
+      // Zipping folders and files hierarchically
+      folders.forEach(folder => {
+        const folderZip = rootFolder.folder(folder.name)!;
+        folder.files.forEach(file => {
+          folderZip.file(file.name, file.content || `# ${file.name}\n\nPrompt ini belum digenerate. Klik "Generate AI" atau gunakan bantuan Claude untuk melengkapinya.`);
+        });
       });
 
       // README
@@ -703,7 +942,7 @@ Folder ini berisi **10 prompt terstruktur** untuk membangun ${projectName} secar
 
 | # | File | Isi |
 |---|------|-----|
-${modules.map(m => `| ${m.number} | ${m.filename} | ${m.description} |`).join('\n')}
+${folders.flatMap(f => f.files).map((file, i) => `| ${String(i + 1).padStart(2, '0')} | ${file.name} | ${file.description} |`).join('\n')}
 
 ## Tips Penggunaan
 
@@ -834,15 +1073,189 @@ ${techStack.length > 0 ? techStack.map(t => `- **${t}**`).join('\n') : `- React 
     finally { setDownloadingZip(false); }
   }
 
-  function copyActivePrompt() {
-    const mod = modules.find(m => m.id === activeId);
-    if (!mod?.content) return;
-    navigator.clipboard.writeText(mod.content);
-    toast.success(`Prompt "${mod.title}" disalin ke clipboard!`);
+  // Dialog state
+  const [showAddFolderModal, setShowAddFolderModal] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderDesc, setNewFolderDesc] = useState('');
+
+  const [showAddFileModal, setShowAddFileModal] = useState(false);
+  const [targetFolderIdForNewFile, setTargetFolderIdForNewFile] = useState<string | null>(null);
+  const [newFileName, setNewFileName] = useState('');
+  const [newFileDesc, setNewFileDesc] = useState('');
+
+  function handleAddFolder() {
+    if (!newFolderName.trim()) { toast.error("Nama folder tidak boleh kosong"); return; }
+    const newFolder: PromptFolder = {
+      id: `folder_${Date.now()}`,
+      name: newFolderName.trim().replace(/\s+/g, '_'),
+      description: newFolderDesc.trim() || 'Custom Folder',
+      files: []
+    };
+    const updated = [...folders, newFolder];
+    setFolders(updated);
+    savePromptsToDb(updated);
+    setActiveFolderId(newFolder.id);
+    setActiveFileId(null);
+    setExpandedFolders(prev => ({ ...prev, [newFolder.id]: true }));
+    setShowAddFolderModal(false);
+    setNewFolderName('');
+    setNewFolderDesc('');
+    toast.success(`Folder "${newFolder.name}" berhasil dibuat!`);
   }
 
-  const activeModule = modules.find(m => m.id === activeId) || modules[0];
-  const generatedCount = modules.filter(m => m.content).length;
+  function handleAddFile() {
+    if (!targetFolderIdForNewFile || !newFileName.trim()) { toast.error("Nama file tidak boleh kosong"); return; }
+    const newFile: PromptFile = {
+      id: `file_${Date.now()}`,
+      name: newFileName.trim().endsWith('.md') ? newFileName.trim() : `${newFileName.trim()}.md`,
+      description: newFileDesc.trim() || 'Custom Prompt File',
+      content: ''
+    };
+    const updated = folders.map(f => {
+      if (f.id === targetFolderIdForNewFile) {
+        return { ...f, files: [...f.files, newFile] };
+      }
+      return f;
+    });
+    setFolders(updated);
+    savePromptsToDb(updated);
+    setActiveFolderId(targetFolderIdForNewFile);
+    setActiveFileId(newFile.id);
+    setShowAddFileModal(false);
+    setNewFileName('');
+    setNewFileDesc('');
+    toast.success(`File "${newFile.name}" berhasil dibuat!`);
+  }
+
+  function handleDeleteFolder(folderId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm("Apakah Anda yakin ingin menghapus folder ini beserta seluruh file di dalamnya?")) return;
+    const updated = folders.filter(f => f.id !== folderId);
+    setFolders(updated);
+    savePromptsToDb(updated);
+    if (activeFolderId === folderId) {
+      const fallbackFolder = updated[0];
+      setActiveFolderId(fallbackFolder?.id || '');
+      setActiveFileId(fallbackFolder?.files[0]?.id || null);
+    }
+    toast.success("Folder berhasil dihapus");
+  }
+
+  function handleDeleteFile(folderId: string, fileId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm("Apakah Anda yakin ingin menghapus file ini?")) return;
+    const updated = folders.map(f => {
+      if (f.id === folderId) {
+        return { ...f, files: f.files.filter(file => file.id !== fileId) };
+      }
+      return f;
+    });
+    setFolders(updated);
+    savePromptsToDb(updated);
+    if (activeFileId === fileId) {
+      setActiveFileId(null);
+    }
+    toast.success("File berhasil dihapus");
+  }
+
+  function handleUpdateFileContent(newVal: string) {
+    if (!activeFileId || !activeFolderId) return;
+    const updated = folders.map(f => {
+      if (f.id === activeFolderId) {
+        return {
+          ...f,
+          files: f.files.map(file => file.id === activeFileId ? { ...file, content: newVal } : file)
+        };
+      }
+      return f;
+    });
+    setFolders(updated);
+    savePromptsToDb(updated);
+  }
+
+  function handleImportClaudeJson(newContent: string) {
+    try {
+      let text = newContent;
+      try {
+        const wrapper = JSON.parse(newContent);
+        if (wrapper && typeof wrapper === 'object' && wrapper.content) {
+          text = wrapper.content;
+        }
+      } catch {}
+
+      const cleanJsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleanJsonStr);
+
+      if (parsed && typeof parsed === 'object') {
+        const draftFolders: PromptFolder[] = JSON.parse(JSON.stringify(folders));
+
+        Object.entries(parsed).forEach(([key, val]) => {
+          const fileContent = val as string;
+          let folderName = '01_Project_Setup';
+          let fileName = key;
+
+          if (key.includes('/')) {
+            const parts = key.split('/');
+            folderName = parts[0].trim().replace(/\s+/g, '_');
+            fileName = parts.slice(1).join('/').trim();
+          }
+
+          // Cari atau buat folder
+          let targetFolder = draftFolders.find(
+            f => f.name.toLowerCase() === folderName.toLowerCase() || f.id === folderName
+          );
+          if (!targetFolder) {
+            targetFolder = {
+              id: `folder_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+              name: folderName,
+              description: `Generated folder for ${folderName}`,
+              files: []
+            };
+            draftFolders.push(targetFolder);
+          }
+
+          // Cari atau buat file
+          let targetFile = targetFolder.files.find(
+            file => file.name.toLowerCase() === fileName.toLowerCase() || file.id === fileName
+          );
+          if (targetFile) {
+            targetFile.content = fileContent;
+          } else {
+            targetFolder.files.push({
+              id: `file_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+              name: fileName,
+              description: `Generated file for ${fileName}`,
+              content: fileContent
+            });
+          }
+        });
+
+        setFolders(draftFolders);
+        savePromptsToDb(draftFolders);
+        toast.success("Prompt & files berhasil di-import dari Claude!");
+      } else {
+        toast.error("Format respons tidak valid. Pastikan berupa JSON object.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal memproses JSON Claude. Pastikan format JSON sesuai.");
+    }
+  }
+
+  const activeFolder = folders.find(f => f.id === activeFolderId) || folders[0];
+  const activeFile = activeFolder?.files.find(file => file.id === activeFileId) || null;
+
+  function copyActivePrompt() {
+    if (!activeFile?.content) { toast.error("File tidak memiliki konten"); return; }
+    navigator.clipboard.writeText(activeFile.content);
+    toast.success(`Prompt "${activeFile.name}" disalin ke clipboard!`);
+  }
+
+  const totalFiles = folders.reduce((sum, f) => sum + f.files.length, 0);
+  const readyFiles = folders.reduce((sum, f) => sum + f.files.filter(file => file.content.trim()).length, 0);
+  const pctReady = totalFiles > 0 ? Math.round((readyFiles / totalFiles) * 100) : 0;
+
+  const projectId = localStorage.getItem("active_project_id");
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
@@ -857,9 +1270,13 @@ ${techStack.length > 0 ? techStack.map(t => `- **${t}**`).join('\n') : `- React 
             {generating ? <Lucide.Loader2 size={12} className="animate-spin" /> : <Lucide.Sparkles size={12} />}
             {generating ? "AI Generating..." : "Generate Semua (AI)"}
           </Button>
-          <button onClick={copyActivePrompt} className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-[11px] font-semibold text-slate-300 hover:bg-slate-800 transition">
-            <Lucide.Copy size={12} className="text-indigo-400" /> Copy Aktif
-          </button>
+          
+          <ClaudeCollaboratorModal
+            projectId={projectId || ""}
+            documentType="prompt"
+            onSaveSuccess={handleImportClaudeJson}
+          />
+
           <Button onClick={downloadZIP} disabled={downloadingZip} size="sm" className="text-[11px] h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white">
             {downloadingZip ? <Lucide.Loader2 size={12} className="animate-spin" /> : <Lucide.Archive size={12} />}
             Unduh ZIP Lengkap
@@ -868,86 +1285,376 @@ ${techStack.length > 0 ? techStack.map(t => `- **${t}**`).join('\n') : `- React 
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left: Module List */}
-        <aside className="w-72 border-r border-border bg-card/30 flex flex-col overflow-y-auto">
-          <div className="p-4 border-b border-border">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-300">10 AI Prompts</span>
-              <span className="text-[10px] text-slate-500">{generatedCount}/10 siap</span>
+        {/* Left: Folder Tree Sidebar */}
+        <aside className="w-72 border-r border-border bg-card/30 flex flex-col overflow-hidden">
+          <div className="p-4 border-b border-border space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-300">Prompt Workspace</span>
+              <span className="text-[10px] text-slate-500">{readyFiles}/{totalFiles} file siap</span>
             </div>
             <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-indigo-600 to-violet-500 transition-all" style={{ width: `${(generatedCount / 10) * 100}%` }} />
+              <div className="h-full bg-gradient-to-r from-indigo-600 to-violet-500 transition-all" style={{ width: `${pctReady}%` }} />
             </div>
+            <Button
+              onClick={() => setShowAddFolderModal(true)}
+              variant="outline"
+              size="sm"
+              className="w-full text-[10px] h-7 gap-1 border-slate-700 bg-slate-900/40 text-slate-300 hover:bg-slate-800"
+            >
+              <Lucide.FolderPlus size={11} className="mr-0.5" /> Tambah Folder
+            </Button>
           </div>
 
-          <div className="flex-1 p-3 space-y-1.5">
-            {modules.map(mod => {
-              const Icon = mod.icon;
-              const isActive = mod.id === activeId;
-              const hasContent = !!mod.content;
+          <div className="flex-1 p-3 space-y-1.5 overflow-y-auto font-sans">
+            {folders.map(folder => {
+              const isExpanded = expandedFolders[folder.id];
+              const isActiveFolder = folder.id === activeFolderId && activeFileId === null;
+              
               return (
-                <button key={mod.id} onClick={() => setActiveId(mod.id)}
-                  className={cn("w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all",
-                    isActive ? "bg-indigo-950/50 border border-indigo-700/40" : "hover:bg-slate-800/40 border border-transparent"
-                  )}>
-                  <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-[11px] font-black", mod.iconCls)}>
-                    {mod.number}
+                <div key={folder.id} className="space-y-1">
+                  {/* Folder Item */}
+                  <div
+                    onClick={() => {
+                      setActiveFolderId(folder.id);
+                      setActiveFileId(null); // Show folder view
+                      setExpandedFolders(prev => ({ ...prev, [folder.id]: !prev[folder.id] }));
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all cursor-pointer group",
+                      isActiveFolder ? "bg-indigo-950/40 border border-indigo-800/40" : "hover:bg-slate-800/20 border border-transparent"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      {isExpanded ? (
+                        <Lucide.ChevronDown size={13} className="text-slate-500 shrink-0" />
+                      ) : (
+                        <Lucide.ChevronRight size={13} className="text-slate-500 shrink-0" />
+                      )}
+                      <Lucide.Folder size={13} className="text-indigo-400 shrink-0" />
+                      <span className="text-[11px] font-bold text-slate-300 truncate">{folder.name}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        title="Tambah File"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTargetFolderIdForNewFile(folder.id);
+                          setShowAddFileModal(true);
+                        }}
+                        className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-indigo-400"
+                      >
+                        <Lucide.Plus size={11} />
+                      </button>
+                      {folders.length > 1 && (
+                        <button
+                          title="Hapus Folder"
+                          onClick={(e) => handleDeleteFolder(folder.id, e)}
+                          className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-rose-400"
+                        >
+                          <Lucide.Trash2 size={11} />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className={cn("text-[11px] font-bold truncate", isActive ? "text-indigo-300" : "text-slate-300")}>{mod.title}</div>
-                    <div className="text-[9px] text-slate-600 mt-0.5 truncate">{mod.description}</div>
-                  </div>
-                  {hasContent && <Lucide.CheckCircle2 size={12} className="text-emerald-500 shrink-0" />}
-                </button>
+
+                  {/* Folder's Files (Expanded) */}
+                  {isExpanded && (
+                    <div className="pl-6 space-y-1">
+                      {folder.files.map(file => {
+                        const isActiveFile = file.id === activeFileId;
+                        const hasContent = !!file.content.trim();
+                        
+                        return (
+                          <div
+                            key={file.id}
+                            onClick={() => {
+                              setActiveFolderId(folder.id);
+                              setActiveFileId(file.id);
+                            }}
+                            className={cn(
+                              "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-all cursor-pointer group/file",
+                              isActiveFile ? "bg-slate-800/80 border border-slate-700/80" : "hover:bg-slate-800/20 border border-transparent"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Lucide.FileText size={12} className={cn("shrink-0", hasContent ? "text-emerald-400" : "text-slate-500")} />
+                              <span className="text-[10.5px] text-slate-400 group-hover/file:text-slate-200 truncate">{file.name}</span>
+                            </div>
+
+                            <button
+                              onClick={(e) => handleDeleteFile(folder.id, file.id, e)}
+                              className="p-0.5 hover:bg-slate-700 rounded text-slate-500 hover:text-rose-400 opacity-0 group-hover/file:opacity-100 transition-opacity"
+                            >
+                              <Lucide.Trash2 size={10} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                      
+                      {folder.files.length === 0 && (
+                        <div className="text-[9.5px] text-slate-600 pl-6 py-1 italic">Folder kosong</div>
+                      )}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
         </aside>
 
-        {/* Right: Prompt Content */}
-        <main className="flex-1 flex flex-col overflow-hidden">
-          {/* Module Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/20">
-            <div className="flex items-center gap-3">
-              <div className={cn("flex h-9 w-9 items-center justify-center rounded-xl border text-sm font-black", activeModule.iconCls)}>
-                {activeModule.number}
+        {/* Right: Workspace Content Panel */}
+        <main className="flex-1 flex flex-col overflow-hidden bg-slate-950/15">
+          {activeFileId === null && activeFolder ? (
+            /* Folder Dashboard View */
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+              <div className="flex items-start justify-between pb-4 border-b border-border">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 shrink-0">
+                    <Lucide.Folder size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-slate-100">{activeFolder.name}</h2>
+                    <p className="text-xs text-slate-500 mt-1">{activeFolder.description}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleGenerateAll}
+                    disabled={generating}
+                    variant="outline"
+                    size="sm"
+                    className="text-[11px] h-8 gap-1 border-violet-700/40 text-violet-400 hover:bg-violet-950/40"
+                  >
+                    {generating ? <Lucide.Loader2 size={12} className="animate-spin" /> : <Lucide.Sparkles size={12} />}
+                    Generate Folder (AI)
+                  </Button>
+                  
+                  <ClaudeCollaboratorModal
+                    projectId={projectId || ""}
+                    documentType="prompt"
+                    onSaveSuccess={handleImportClaudeJson}
+                  />
+                </div>
               </div>
-              <div>
-                <h2 className="text-sm font-bold text-slate-100">{activeModule.title}</h2>
-                <p className="text-[11px] text-slate-500">{activeModule.description}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-500 font-mono">{activeModule.filename}</span>
-              <button onClick={copyActivePrompt} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900 text-[11px] font-semibold text-slate-300 hover:bg-slate-800 transition">
-                <Lucide.Copy size={12} className="text-indigo-400" /> Copy
-              </button>
-            </div>
-          </div>
 
-          {/* Content Area */}
-          {generating ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-4">
-              <div className="relative"><Lucide.Loader2 size={40} className="animate-spin text-violet-500" /><div className="absolute -inset-4 rounded-full border border-violet-500/20 animate-ping" /></div>
-              <p className="text-sm text-slate-400 font-medium">AI sedang menyusun 10 prompt...</p>
-              <p className="text-xs text-slate-600">Membaca blueprint, tasks, dan PRD Anda</p>
+              <div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Daftar File Prompt ({activeFolder.files.length})</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {activeFolder.files.map(file => (
+                    <div
+                      key={file.id}
+                      onClick={() => setActiveFileId(file.id)}
+                      className="p-4 rounded-xl border border-slate-800/80 bg-slate-900/40 hover:bg-slate-900/60 hover:border-slate-700/60 transition-all cursor-pointer flex justify-between items-start"
+                    >
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                          <Lucide.FileText size={12} className={file.content.trim() ? "text-emerald-400" : "text-slate-500"} />
+                          {file.name}
+                        </h4>
+                        <p className="text-[10px] text-slate-500 mt-1 truncate">{file.description}</p>
+                      </div>
+                      <span className={cn(
+                        "text-[9px] px-2 py-0.5 rounded font-semibold",
+                        file.content.trim() ? "bg-emerald-950/60 text-emerald-400 border border-emerald-800/40" : "bg-slate-800/40 text-slate-500 border border-slate-700/40"
+                      )}>
+                        {file.content.trim() ? "Ready" : "Kosong"}
+                      </span>
+                    </div>
+                  ))}
+                  
+                  {activeFolder.files.length === 0 && (
+                    <div className="col-span-2 text-center py-8 rounded-xl border border-dashed border-slate-800 text-slate-500 text-xs">
+                      Folder ini belum memiliki file prompt. Klik "+" di sebelah nama folder untuk menambahkan file baru.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : activeFile ? (
+            /* File Content Editor/Viewer View */
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* File Header */}
+              <div className="flex items-center justify-between px-6 py-3.5 border-b border-border bg-card/20">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Lucide.FileText size={16} className="text-indigo-400 shrink-0" />
+                  <div className="min-w-0">
+                    <h2 className="text-xs font-bold text-slate-100 truncate">{activeFile.name}</h2>
+                    <p className="text-[10px] text-slate-500 truncate">di dalam folder {activeFolder.name}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* Mode Tabs */}
+                  <div className="flex bg-slate-900 border border-slate-800 rounded-lg p-0.5">
+                    <button
+                      onClick={() => setEditMode(false)}
+                      className={cn("px-2.5 py-1 rounded text-[10px] font-bold transition", !editMode ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200")}
+                    >
+                      Preview
+                    </button>
+                    <button
+                      onClick={() => setEditMode(true)}
+                      className={cn("px-2.5 py-1 rounded text-[10px] font-bold transition", editMode ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200")}
+                    >
+                      Edit Raw
+                    </button>
+                  </div>
+
+                  <span className="w-[1px] h-5 bg-slate-800 mx-1" />
+
+                  <Button
+                    onClick={handleGenerateActive}
+                    disabled={generatingActive || generating}
+                    variant="outline"
+                    size="sm"
+                    className="text-[10px] h-7.5 gap-1 border-slate-700 bg-slate-900 text-violet-400 hover:bg-slate-800"
+                  >
+                    {generatingActive ? <Lucide.Loader2 size={11} className="animate-spin text-violet-500" /> : <Lucide.Sparkles size={11} />}
+                    Generate AI (File Ini)
+                  </Button>
+                  
+                  <button onClick={copyActivePrompt} className="flex items-center gap-1 h-7.5 rounded-lg border border-slate-700 bg-slate-900 px-2.5 text-[10px] font-bold text-slate-300 hover:bg-slate-800 transition">
+                    <Lucide.Copy size={11} className="text-indigo-400" /> Copy
+                  </button>
+                </div>
+              </div>
+
+              {/* Editor/Viewer Workspace */}
+              {generatingActive ? (
+                <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                  <div className="relative"><Lucide.Loader2 size={40} className="animate-spin text-violet-500" /><div className="absolute -inset-4 rounded-full border border-violet-500/20 animate-ping" /></div>
+                  <p className="text-sm text-slate-400 font-medium">AI sedang menyusun prompt untuk "${activeFile.name}"...</p>
+                  <p className="text-xs text-slate-600">Membaca spesifikasi PRD dan database schema</p>
+                </div>
+              ) : editMode ? (
+                /* Editable Textarea */
+                <div className="flex-1 p-5 overflow-hidden">
+                  <textarea
+                    value={activeFile.content}
+                    onChange={(e) => handleUpdateFileContent(e.target.value)}
+                    placeholder="# Tulis atau tempel konten prompt di sini..."
+                    className="w-full h-full bg-slate-950/20 border border-slate-800/80 rounded-xl p-4 font-mono text-[12px] leading-relaxed text-slate-300 focus:outline-none focus:border-indigo-500/40 resize-none overflow-y-auto"
+                  />
+                </div>
+              ) : (
+                /* Markdown Preview Mode */
+                <div className="flex-1 flex overflow-hidden">
+                  {/* Line numbers */}
+                  <div className="select-none border-r border-border/50 bg-slate-950/20 px-3 py-4 text-right text-slate-600/40 font-mono text-[10px] leading-[1.75] min-w-[42px] overflow-hidden">
+                    {(activeFile.content || '').split('\n').map((_, i) => <div key={i}>{i + 1}</div>)}
+                  </div>
+                  {/* Markdown content */}
+                  <div className="flex-1 overflow-auto p-5">
+                    {activeFile.content ? (
+                      <pre className="text-slate-300 font-mono text-[12px] leading-[1.75] whitespace-pre-wrap break-words">
+                        <code>{activeFile.content}</code>
+                      </pre>
+                    ) : (
+                      <div className="text-center py-20 text-slate-500 text-xs">
+                        — Konten prompt kosong. Klik "Generate AI (File Ini)" di atas atau beralih ke "Edit Raw" untuk mengisinya secara manual —
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
-            <div className="flex-1 flex overflow-hidden">
-              {/* Line numbers */}
-              <div className="select-none border-r border-border/50 bg-slate-950/20 px-3 py-4 text-right text-slate-600/40 font-mono text-[10px] leading-[1.75] min-w-[42px] overflow-hidden">
-                {(activeModule.content || '').split('\n').map((_, i) => <div key={i}>{i + 1}</div>)}
-              </div>
-              {/* Content */}
-              <div className="flex-1 overflow-auto p-5">
-                <pre className="text-slate-300 font-mono text-[12px] leading-[1.75] whitespace-pre-wrap break-words">
-                  <code>{activeModule.content || '— Klik "Generate Semua (AI)" untuk mengisi prompt ini dengan konten yang disesuaikan dengan blueprint aplikasi Anda —'}</code>
-                </pre>
-              </div>
+            <div className="flex-1 flex items-center justify-center text-slate-500 text-xs">
+              Pilih folder atau file di panel kiri untuk mulai bekerja.
             </div>
           )}
         </main>
       </div>
+
+      {/* Dialog: Tambah Folder Baru */}
+      <Dialog open={showAddFolderModal} onOpenChange={setShowAddFolderModal}>
+        <DialogContent className="max-w-sm text-slate-100 bg-[#0c1017] border border-slate-800 p-5">
+          <DialogHeader className="space-y-1.5">
+            <DialogTitle className="text-sm font-bold flex items-center gap-1.5 text-indigo-400">
+              <Lucide.Folder size={15} /> Buat Folder Prompt Baru
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-400">
+              Tambahkan kategori folder untuk mengorganisir rules/prompts Anda.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase">Nama Folder</label>
+              <Input
+                placeholder="01_Setup"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                className="h-8.5 text-xs bg-slate-900 border-slate-800 text-slate-200"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase">Deskripsi Singkat</label>
+              <Input
+                placeholder="Inisialisasi repo dan rules"
+                value={newFolderDesc}
+                onChange={(e) => setNewFolderDesc(e.target.value)}
+                className="h-8.5 text-xs bg-slate-900 border-slate-800 text-slate-200"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex justify-end gap-2 pt-3 border-t border-slate-850">
+            <Button variant="ghost" size="sm" onClick={() => setShowAddFolderModal(false)} className="text-xs text-slate-400">
+              Batal
+            </Button>
+            <Button size="sm" onClick={handleAddFolder} className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white">
+              Buat Folder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Tambah File Baru */}
+      <Dialog open={showAddFileModal} onOpenChange={setShowAddFileModal}>
+        <DialogContent className="max-w-sm text-slate-100 bg-[#0c1017] border border-slate-800 p-5">
+          <DialogHeader className="space-y-1.5">
+            <DialogTitle className="text-sm font-bold flex items-center gap-1.5 text-emerald-400">
+              <Lucide.FileText size={15} /> Buat File Prompt Baru
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-400">
+              Tambahkan file aturan baru di dalam folder terpilih.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase">Nama File</label>
+              <Input
+                placeholder="CURSOR_RULES.md"
+                value={newFileName}
+                onChange={(e) => setNewFileName(e.target.value)}
+                className="h-8.5 text-xs bg-slate-900 border-slate-800 text-slate-200"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase">Keterangan</label>
+              <Input
+                placeholder="Aturan penulisan kode"
+                value={newFileDesc}
+                onChange={(e) => setNewFileDesc(e.target.value)}
+                className="h-8.5 text-xs bg-slate-900 border-slate-800 text-slate-200"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex justify-end gap-2 pt-3 border-t border-slate-850">
+            <Button variant="ghost" size="sm" onClick={() => setShowAddFileModal(false)} className="text-xs text-slate-400">
+              Batal
+            </Button>
+            <Button size="sm" onClick={handleAddFile} className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white">
+              Buat File
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

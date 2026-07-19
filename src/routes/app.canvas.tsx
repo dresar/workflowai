@@ -12,7 +12,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import {
   nodeTypes, type AppBlueprint, type PageItem, type ApiEndpointItem, type TableItem,
-  type PageStatus, PAGE_TYPE_META, AUTH_LEVEL_META, STATUS_META, METHOD_META,
+  type PageStatus, type HttpMethod, PAGE_TYPE_META, AUTH_LEVEL_META, STATUS_META, METHOD_META,
 } from "./-canvas-nodes";
 
 export const Route = createFileRoute("/app/canvas")({ component: CanvasPage });
@@ -23,128 +23,27 @@ export const Route = createFileRoute("/app/canvas")({ component: CanvasPage });
 const FALLBACK_BLUEPRINT: AppBlueprint = {
   pages: [
     // Public & Auth
-    { id: 'p1',   name: 'Landing Page',       route: '/',                              type: 'landing',   description: 'Hero, features, pricing, testimonial, dan CTA', components: ['HeroSection', 'FeaturesGrid', 'PricingTable', 'TestimonialSlider', 'CTABanner', 'Navbar', 'Footer'], authLevel: 'public', status: 'todo' },
-    { id: 'p2',   name: 'Login',              route: '/auth/login',                    type: 'auth',      description: 'Email+password login dengan OAuth Google/GitHub', components: ['LoginForm', 'OAuthButtons', 'ForgotPasswordLink', 'RememberMeToggle'], authLevel: 'public', status: 'todo' },
-    { id: 'p3',   name: 'Register',           route: '/auth/register',                 type: 'auth',      description: 'Form registrasi, password strength meter, terms', components: ['RegisterForm', 'PasswordStrengthMeter', 'TermsCheckbox', 'OAuthButtons'], authLevel: 'public', status: 'todo' },
-    { id: 'p3b',  name: 'Forgot Password',    route: '/auth/forgot-password',          type: 'form',      description: 'Kirim email reset password, tampilkan konfirmasi', components: ['ForgotPasswordForm', 'SuccessMessage'], authLevel: 'public', status: 'todo' },
-    { id: 'p3c',  name: 'Reset Password',     route: '/auth/reset-password/:token',    type: 'form',      description: 'Input password baru via token dari email', components: ['ResetPasswordForm', 'PasswordStrengthMeter', 'TokenExpiredMessage'], authLevel: 'public', status: 'todo' },
+    { id: 'p1',   name: 'Landing Page',       route: '/',                              type: 'landing',   description: 'Halaman landing dengan Hero section, Fitur utama, dan tombol registrasi.', components: ['Navbar', 'HeroSection', 'FeaturesGrid', 'CTABanner', 'Footer'], authLevel: 'public', status: 'todo' },
+    { id: 'p2',   name: 'Login',              route: '/auth/login',                    type: 'auth',      description: 'Halaman login pengguna dengan email dan password.', components: ['LoginForm', 'SocialLoginButtons'], authLevel: 'public', status: 'todo' },
+    { id: 'p3',   name: 'Register',           route: '/auth/register',                 type: 'auth',      description: 'Halaman pendaftaran pengguna baru.', components: ['RegisterForm'], authLevel: 'public', status: 'todo' },
     // App Core
-    { id: 'p4',   name: 'Dashboard',          route: '/app/dashboard',                 type: 'dashboard', description: 'KPI cards, activity chart, recent projects, quick actions', components: ['KPICards', 'ActivityLineChart', 'RecentProjectsList', 'QuickActionGrid', 'WelcomeBanner'], authLevel: 'protected', status: 'todo' },
-    { id: 'p7',   name: 'Canvas Blueprint',   route: '/app/canvas',                    type: 'dashboard', description: 'Visual ERD: Frontend/Backend/Database layer, AI revision', components: ['ReactFlowCanvas', 'GroupNode', 'FilterPanel', 'RevisionModal', 'MiniMap'], authLevel: 'protected', status: 'todo' },
-    { id: 'p8',   name: 'Tasks Checklist',    route: '/app/tasks',                     type: 'crud',      description: 'Task checklist untuk coding agent, generate dari canvas', components: ['TaskList', 'TaskCard', 'AddTaskModal', 'CategorySidebar', 'ProgressBar'], authLevel: 'protected', status: 'todo' },
-    { id: 'p9',   name: 'AI Prompts (10x)',   route: '/app/prompt',                    type: 'crud',      description: '10 modul prompt terpisah + unduh ZIP dengan folder rules', components: ['PromptModuleList', 'PromptViewer', 'CopyButton', 'ZIPDownloadButton'], authLevel: 'protected', status: 'todo' },
-    // Projects CRUD
-    { id: 'p5',   name: 'Projects — List',    route: '/app/projects',                  type: 'crud',      description: 'Tabel, search, filter status, sort, pagination, bulk select', components: ['ProjectsTable', 'SearchBar', 'StatusFilter', 'SortDropdown', 'Pagination', 'BulkActionsBar', 'EmptyState'], authLevel: 'protected', status: 'todo' },
-    { id: 'p5b',  name: 'Projects — Create',  route: '/app/projects/create',           type: 'form',      description: 'Multi-step form: project info, template pilihan, tech stack', components: ['MultiStepForm', 'ProjectInfoStep', 'TechStackPicker', 'TemplateGallery', 'FormProgress'], authLevel: 'protected', status: 'todo' },
-    { id: 'p5c',  name: 'Projects — Detail',  route: '/app/projects/:id',              type: 'detail',    description: 'Header proyek, tabs dokumen AI, action bar generate & download', components: ['ProjectHeader', 'StatusTimeline', 'DocumentTabs', 'AIGenerateButton', 'RevisionPanel', 'DownloadZIPButton'], authLevel: 'protected', status: 'todo' },
-    { id: 'p5d',  name: 'Projects — Edit',    route: '/app/projects/:id/edit',         type: 'form',      description: 'Form edit nama, deskripsi, tech stack, danger zone delete', components: ['EditProjectForm', 'TechStackEditor', 'AIPreferencePanel', 'DangerZoneCard', 'DeleteConfirmModal'], authLevel: 'protected', status: 'todo' },
-    // Documents
-    { id: 'p6',   name: 'Documents — List',   route: '/app/projects/:id/documents',    type: 'crud',      description: 'Grid dokumen AI: PRD, arsitektur, DB, API, tasks, prompt', components: ['DocumentGrid', 'TypeFilterTabs', 'DocumentCard', 'StatusBadge', 'RegenerateButton'], authLevel: 'protected', status: 'todo' },
-    { id: 'p6b',  name: 'Document — Viewer',  route: '/app/projects/:id/documents/:type', type: 'detail', description: 'Markdown viewer, line numbers, revisi AI, version history', components: ['DocumentHeader', 'MarkdownViewer', 'LineNumbers', 'RevisionModal', 'VersionHistoryDrawer', 'CopyButton', 'DownloadButton'], authLevel: 'protected', status: 'todo' },
-    // Settings
-    { id: 'p10',  name: 'Settings — Profile', route: '/app/settings',                  type: 'settings',  description: 'Edit profil: nama, avatar, bio, GitHub link, preferensi', components: ['ProfileForm', 'AvatarUploader', 'SocialLinksForm'], authLevel: 'protected', status: 'todo' },
-    { id: 'p10b', name: 'Settings — Security',route: '/app/settings/security',         type: 'settings',  description: 'Ganti password, list session aktif, logout semua device', components: ['ChangePasswordForm', 'ActiveSessionsList', 'LogoutAllDevicesButton'], authLevel: 'protected', status: 'todo' },
-    { id: 'p10c', name: 'Settings — AI Prefs',route: '/app/settings/ai',               type: 'settings',  description: 'Pilih AI provider default, model, dan prompt preferences', components: ['ProviderSelector', 'ModelSelector', 'PromptPreferences'], authLevel: 'protected', status: 'todo' },
-    // Admin
-    { id: 'p11',  name: 'Admin — Dashboard',  route: '/admin',                         type: 'admin',     description: 'KPI sistem, AI usage chart, provider distribution, growth', components: ['AdminKPICards', 'AIUsageAreaChart', 'ProviderPieChart', 'UserGrowthChart', 'RecentErrorsList'], authLevel: 'admin', status: 'todo' },
-    { id: 'p12',  name: 'Admin — Users',      route: '/admin/users',                   type: 'admin',     description: 'Tabel user, search, filter role, edit role, ban, delete', components: ['UsersDataTable', 'SearchAndFilter', 'UserDetailModal', 'EditRoleModal', 'BanConfirmModal', 'DeleteConfirmModal'], authLevel: 'admin', status: 'todo' },
-    { id: 'p13',  name: 'Admin — Providers',  route: '/admin/providers',               type: 'admin',     description: 'Manajemen AI provider, API keys, quota monitoring', components: ['ProvidersTable', 'AddProviderModal', 'EditProviderDrawer', 'APIKeysManager', 'QuotaProgressBar'], authLevel: 'admin', status: 'todo' },
-    { id: 'p14',  name: 'Admin — Monitoring', route: '/admin/monitoring',              type: 'admin',     description: 'Realtime: server health, AI latency, error rate, logs', components: ['RealtimeMetricCharts', 'ErrorLogsTable', 'ServerHealthBanner', 'AlertsPanel'], authLevel: 'admin', status: 'todo' },
-    { id: 'p15',  name: 'Admin — Settings',   route: '/admin/settings',                type: 'admin',     description: 'Prompt templates, interview questions, feature flags', components: ['PromptTemplateEditor', 'QuestionListManager', 'FeatureFlagsToggle', 'SystemConfigForm'], authLevel: 'admin', status: 'todo' },
+    { id: 'p4',   name: 'Dashboard',          route: '/app/dashboard',                 type: 'dashboard', description: 'Dashboard utama menampilkan ringkasan data, matriks KPI, dan navigasi cepat.', components: ['KPICards', 'RecentActivityList', 'QuickActions'], authLevel: 'protected', status: 'todo' },
+    { id: 'p5',   name: 'Profile Settings',    route: '/app/settings',                  type: 'settings',  description: 'Pengaturan profil: nama, foto profil, dan ganti password.', components: ['ProfileForm', 'PasswordChangeForm'], authLevel: 'protected', status: 'todo' },
   ],
   apiEndpoints: [
-    // Auth
-    { id: 'a1',  method: 'POST',   path: '/api/v1/auth/register',                description: 'Registrasi, hash bcrypt/12, kirim email verif, return JWT', authLevel: 'public' },
-    { id: 'a2',  method: 'POST',   path: '/api/v1/auth/login',                   description: 'Login email+password, return access_token (15m) + refresh cookie (7d)', authLevel: 'public' },
-    { id: 'a3',  method: 'POST',   path: '/api/v1/auth/logout',                  description: 'Hapus refresh token dari DB, clear httpOnly cookie', authLevel: 'protected' },
-    { id: 'a4',  method: 'POST',   path: '/api/v1/auth/refresh',                 description: 'Baca refresh_token dari cookie, generate access_token baru', authLevel: 'public' },
-    { id: 'a5',  method: 'POST',   path: '/api/v1/auth/forgot-password',         description: 'Kirim email OTP reset (expire 15 menit)', authLevel: 'public' },
-    { id: 'a6',  method: 'POST',   path: '/api/v1/auth/reset-password',          description: 'Validasi OTP, hash password baru, invalidate semua session lama', authLevel: 'public' },
-    { id: 'a7',  method: 'GET',    path: '/api/v1/auth/verify-email/:token',     description: 'Verifikasi email via token → set is_verified=true', authLevel: 'public' },
-    { id: 'a8',  method: 'GET',    path: '/api/v1/auth/me',                      description: 'Return profil user aktif dari Bearer JWT', authLevel: 'protected' },
-    { id: 'a9',  method: 'GET',    path: '/api/v1/auth/sessions',                description: 'List semua session aktif (device, IP, last_active)', authLevel: 'protected' },
-    { id: 'a10', method: 'DELETE', path: '/api/v1/auth/sessions/:sessionId',     description: 'Logout dari device tertentu berdasarkan session ID', authLevel: 'protected' },
-    // Projects
-    { id: 'b1',  method: 'GET',    path: '/api/v1/projects',                     description: 'List proyek user (paginated, search, status, sort)', authLevel: 'protected' },
-    { id: 'b2',  method: 'POST',   path: '/api/v1/projects',                     description: 'Buat proyek baru → return data + ID', authLevel: 'protected' },
-    { id: 'b3',  method: 'GET',    path: '/api/v1/projects/:id',                 description: 'Detail proyek + dokumen terbaru + canvas + tech stack', authLevel: 'protected' },
-    { id: 'b4',  method: 'PUT',    path: '/api/v1/projects/:id',                 description: 'Update nama, deskripsi, preferred_provider', authLevel: 'protected' },
-    { id: 'b5',  method: 'DELETE', path: '/api/v1/projects/:id',                 description: 'Soft delete → is_deleted=true, recoverable 30 hari', authLevel: 'protected' },
-    { id: 'b6',  method: 'POST',   path: '/api/v1/projects/:id/restore',         description: 'Restore dari recycle bin', authLevel: 'protected' },
-    { id: 'b7',  method: 'POST',   path: '/api/v1/projects/:id/duplicate',       description: 'Clone proyek + semua dokumen, canvas, tech stack', authLevel: 'protected' },
-    { id: 'b8',  method: 'GET',    path: '/api/v1/projects/:id/canvas',          description: 'Get canvas blueprint JSON terbaru', authLevel: 'protected' },
-    { id: 'b9',  method: 'POST',   path: '/api/v1/projects/:id/canvas',          description: 'Simpan/update canvas (auto-save + versioning)', authLevel: 'protected' },
-    { id: 'b10', method: 'GET',    path: '/api/v1/projects/:id/documents',       description: 'List semua dokumen AI (tipe, versi, provider)', authLevel: 'protected' },
-    { id: 'b11', method: 'GET',    path: '/api/v1/projects/:id/documents/:type', description: 'Get dokumen terbaru (prd, architecture, database, api, tasks, prompt)', authLevel: 'protected' },
-    { id: 'b12', method: 'POST',   path: '/api/v1/projects/:id/documents/:type', description: 'Simpan dokumen manual atau revisi dari cursor', authLevel: 'protected' },
-    { id: 'b13', method: 'GET',    path: '/api/v1/projects/:id/documents/:type/history', description: 'Riwayat versi dokumen untuk rollback', authLevel: 'protected' },
-    { id: 'b14', method: 'GET',    path: '/api/v1/projects/:id/technologies',    description: 'List tech stack terpilih untuk proyek', authLevel: 'protected' },
-    { id: 'b15', method: 'POST',   path: '/api/v1/projects/:id/technologies',    description: 'Update tech stack (replace seluruh array)', authLevel: 'protected' },
-    { id: 'b16', method: 'GET',    path: '/api/v1/projects/:id/answers',         description: 'Get semua jawaban interview tersimpan', authLevel: 'protected' },
-    { id: 'b17', method: 'POST',   path: '/api/v1/projects/:id/answers',         description: 'Upsert jawaban interview per proyek', authLevel: 'protected' },
-    // Generate
-    { id: 'c1',  method: 'POST',   path: '/api/v1/generate/canvas/:id',          description: 'AI generate blueprint JSON (pages, API, tables)', authLevel: 'protected' },
-    { id: 'c2',  method: 'POST',   path: '/api/v1/generate/prd/:id',             description: 'AI generate PRD: latar belakang, user stories, scope', authLevel: 'protected' },
-    { id: 'c3',  method: 'POST',   path: '/api/v1/generate/architecture/:id',    description: 'AI generate arsitektur sistem, tech decisions, deployment', authLevel: 'protected' },
-    { id: 'c4',  method: 'POST',   path: '/api/v1/generate/database/:id',        description: 'AI generate ERD + SQL schema + migration', authLevel: 'protected' },
-    { id: 'c5',  method: 'POST',   path: '/api/v1/generate/api/:id',             description: 'AI generate spesifikasi API endpoint lengkap', authLevel: 'protected' },
-    { id: 'c6',  method: 'POST',   path: '/api/v1/generate/tasks/:id',           description: 'AI generate task breakdown dari canvas + dokumen', authLevel: 'protected' },
-    { id: 'c7',  method: 'POST',   path: '/api/v1/generate/prompt/:id',          description: 'AI generate 10 modul prompt untuk coding agent', authLevel: 'protected' },
-    // Public
-    { id: 'e1',  method: 'GET',    path: '/api/v1/technologies',                 description: 'List semua teknologi aktif untuk dipilih', authLevel: 'public' },
-    { id: 'e2',  method: 'GET',    path: '/api/v1/technologies/categories',      description: 'List kategori teknologi', authLevel: 'public' },
-    { id: 'e3',  method: 'GET',    path: '/api/v1/interview/questions',          description: 'List pertanyaan interview AI', authLevel: 'public' },
-    // Admin
-    { id: 'd1',  method: 'GET',    path: '/api/v1/admin/dashboard/stats',        description: 'Stats global: users, projects, AI calls, cost', authLevel: 'admin' },
-    { id: 'd2',  method: 'GET',    path: '/api/v1/admin/dashboard/ai-usage',     description: 'Data chart AI usage per hari/minggu', authLevel: 'admin' },
-    { id: 'd3',  method: 'GET',    path: '/api/v1/admin/dashboard/provider-distribution', description: 'Distribusi penggunaan per AI provider', authLevel: 'admin' },
-    { id: 'd4',  method: 'GET',    path: '/api/v1/admin/users',                  description: 'List semua user (paginated, search, filter)', authLevel: 'admin' },
-    { id: 'd5',  method: 'PUT',    path: '/api/v1/admin/users/:id',              description: 'Update user: role, verifikasi, ban status', authLevel: 'admin' },
-    { id: 'd6',  method: 'DELETE', path: '/api/v1/admin/users/:id',              description: 'Hard delete user + semua data terkait', authLevel: 'admin' },
-    { id: 'd7',  method: 'GET',    path: '/api/v1/admin/providers',              description: 'List semua AI provider (status, quota, usage)', authLevel: 'admin' },
-    { id: 'd8',  method: 'POST',   path: '/api/v1/admin/providers',              description: 'Tambah AI provider baru', authLevel: 'admin' },
-    { id: 'd9',  method: 'PUT',    path: '/api/v1/admin/providers/:id',          description: 'Update provider (model, priority, aktif/nonaktif)', authLevel: 'admin' },
-    { id: 'd10', method: 'DELETE', path: '/api/v1/admin/providers/:id',          description: 'Hapus provider (hanya jika tidak ada usage log)', authLevel: 'admin' },
-    { id: 'd11', method: 'GET',    path: '/api/v1/admin/api-keys',               description: 'List API key per provider (ter-mask)', authLevel: 'admin' },
-    { id: 'd12', method: 'POST',   path: '/api/v1/admin/api-keys',               description: 'Tambah API key baru (dienkripsi)', authLevel: 'admin' },
-    { id: 'd13', method: 'PUT',    path: '/api/v1/admin/api-keys/:id',           description: 'Update label, quota, is_active API key', authLevel: 'admin' },
-    { id: 'd14', method: 'DELETE', path: '/api/v1/admin/api-keys/:id',           description: 'Hapus API key permanen', authLevel: 'admin' },
-    { id: 'd15', method: 'GET',    path: '/api/v1/admin/monitoring/realtime',    description: 'Monitoring realtime: CPU, memory, latency P95', authLevel: 'admin' },
-    { id: 'd16', method: 'GET',    path: '/api/v1/admin/logs/activity',          description: 'Log aktivitas dengan filter dan paginasi', authLevel: 'admin' },
-    { id: 'd17', method: 'GET',    path: '/api/v1/admin/settings',               description: 'Get semua system settings', authLevel: 'admin' },
-    { id: 'd18', method: 'PUT',    path: '/api/v1/admin/settings/:key',          description: 'Update system setting berdasarkan key', authLevel: 'admin' },
-    { id: 'd19', method: 'GET',    path: '/api/v1/admin/prompt-templates',       description: 'List prompt template per tipe generate', authLevel: 'admin' },
-    { id: 'd20', method: 'PUT',    path: '/api/v1/admin/prompt-templates/:id',   description: 'Update system prompt dan user prompt template', authLevel: 'admin' },
+    // Auth & Users
+    { id: 'a1',  method: 'POST',   path: '/api/v1/auth/register',                description: 'Pendaftaran user baru, return access_token JWT', authLevel: 'public' },
+    { id: 'a2',  method: 'POST',   path: '/api/v1/auth/login',                   description: 'Login dengan email + password, return JWT token', authLevel: 'public' },
+    { id: 'a3',  method: 'GET',    path: '/api/v1/user/profile',                 description: 'Mengambil data profil pengguna aktif', authLevel: 'protected' },
+    { id: 'a4',  method: 'PUT',    path: '/api/v1/user/profile',                 description: 'Memperbarui data profil pengguna', authLevel: 'protected' },
   ],
   tables: [
-    // Users Cluster
-    { id: 't1',   name: 'users',               description: 'Akun utama: email, password_hash, role, is_verified, is_banned', columns: ['id uuid PK', 'email varchar UNIQUE', 'name varchar', 'avatar_url text', 'password_hash text', 'role enum', 'is_verified bool', 'is_banned bool', 'created_at', 'updated_at'] },
-    { id: 't1b',  name: 'user_sessions',       description: 'Refresh token aktif per device (multi-device login)', columns: ['id uuid PK', 'user_id FK→users', 'refresh_token_hash text UNIQUE', 'device_info jsonb', 'ip_address inet', 'user_agent text', 'expires_at', 'created_at'] },
-    { id: 't1c',  name: 'user_profiles',       description: 'Profil tambahan: bio, sosmed, preferensi tema/bahasa', columns: ['id uuid PK', 'user_id FK→users UNIQUE', 'bio text', 'website_url', 'github_url', 'preferred_language', 'ui_theme', 'updated_at'] },
-    { id: 't1d',  name: 'password_resets',     description: 'Token OTP reset password (expire 15 menit)', columns: ['id uuid PK', 'user_id FK→users', 'token_hash text', 'expires_at', 'used_at', 'ip_requested inet', 'created_at'] },
-    { id: 't1e',  name: 'email_verifications', description: 'Token verifikasi email setelah registrasi (expire 24 jam)', columns: ['id uuid PK', 'user_id FK→users', 'token_hash UNIQUE', 'expires_at', 'verified_at', 'created_at'] },
-    { id: 't1f',  name: 'notifications',       description: 'Notifikasi in-app per user: generate selesai, error, alert', columns: ['id uuid PK', 'user_id FK→users', 'type varchar', 'title', 'message text', 'is_read bool', 'action_url', 'metadata jsonb', 'created_at'] },
-    // Projects Cluster
-    { id: 't2',   name: 'projects',            description: 'Proyek utama dengan soft delete dan status alur kerja AI', columns: ['id uuid PK', 'user_id FK→users', 'name varchar', 'description text', 'status enum', 'preferred_provider', 'is_deleted bool', 'deleted_at', 'created_at', 'updated_at'] },
-    { id: 't2b',  name: 'project_answers',     description: 'Jawaban interview AI per proyek (upsert key-value)', columns: ['id uuid PK', 'project_id FK→projects', 'question_key varchar', 'answer_value text', 'created_at', 'updated_at', 'UNIQUE(project_id, question_key)'] },
-    { id: 't2c',  name: 'project_canvas',      description: 'Canvas blueprint JSON: pages, apiEndpoints, tables per proyek', columns: ['id uuid PK', 'project_id FK→projects UNIQUE', 'blueprint jsonb NOT NULL', 'is_ai_generated bool', 'schema_version int', 'created_at', 'updated_at'] },
-    { id: 't2d',  name: 'project_technologies',description: 'Relasi many-to-many proyek ↔ teknologi terpilih', columns: ['id uuid PK', 'project_id FK→projects', 'technology_id FK→technologies', 'created_at', 'UNIQUE(project_id, technology_id)'] },
-    // Documents Cluster
-    { id: 't3',   name: 'generated_documents', description: 'Dokumen AI terbaru per tipe per proyek (PRD, arsitektur, dll)', columns: ['id uuid PK', 'project_id FK→projects', 'type document_type_enum', 'content text NOT NULL', 'provider_used', 'model_used', 'tokens_used int', 'generation_time_ms', 'version int', 'created_at', 'UNIQUE(project_id, type)'] },
-    { id: 't3b',  name: 'document_history',    description: 'Riwayat semua versi dokumen untuk rollback dan audit', columns: ['id uuid PK', 'project_id FK→projects', 'document_id FK→generated_documents', 'type enum', 'content text', 'version int', 'revision_note text', 'generated_by', 'created_at'] },
-    // AI Providers Cluster
-    { id: 't4',   name: 'ai_providers',        description: 'Gemini, Groq, OpenAI, Anthropic — prioritas rotasi dan quota', columns: ['id uuid PK', 'name varchar UNIQUE', 'display_name', 'default_model', 'base_url text', 'is_active bool', 'priority int', 'max_tokens int', 'created_at', 'updated_at'] },
-    { id: 't4b',  name: 'api_keys',            description: 'API key per provider, AES-256 encrypted, quota tracking', columns: ['id uuid PK', 'provider_id FK→ai_providers', 'label varchar', 'key_encrypted text NOT NULL', 'quota_limit int', 'quota_used int', 'is_active bool', 'last_used_at', 'expires_at', 'created_at'] },
-    { id: 't4c',  name: 'ai_usage_logs',       description: 'Log token AI per generate per proyek (billing & monitoring)', columns: ['id uuid PK', 'project_id FK→projects', 'user_id FK→users', 'provider_id FK→ai_providers', 'api_key_id FK→api_keys', 'generate_type', 'prompt_tokens', 'completion_tokens', 'total_tokens', 'cost_usd numeric', 'latency_ms', 'status', 'created_at'] },
-    // System Config Cluster
-    { id: 't5',   name: 'technologies',        description: 'Katalog teknologi yang tersedia sebagai pilihan tech stack', columns: ['id uuid PK', 'name varchar UNIQUE', 'display_name', 'category', 'logo_url text', 'description text', 'is_active bool', 'sort_order int', 'created_at'] },
-    { id: 't5b',  name: 'interview_questions', description: 'Pertanyaan interview AI yang ditampilkan saat setup proyek', columns: ['id uuid PK', 'key varchar UNIQUE', 'question_text text NOT NULL', 'type enum', 'options jsonb', 'is_required bool', 'sort_order int', 'is_active bool'] },
-    { id: 't5c',  name: 'prompt_templates',    description: 'Template sistem prompt AI per tipe generate — bisa diedit admin', columns: ['id uuid PK', 'type document_type_enum', 'name varchar', 'system_prompt text NOT NULL', 'user_prompt_template text', 'version int', 'is_published bool', 'created_by FK→users', 'created_at'] },
-    { id: 't5d',  name: 'system_settings',     description: 'Key-value store untuk konfigurasi global (feature flags, dll)', columns: ['id uuid PK', 'key varchar UNIQUE', 'value text', 'type enum', 'description text', 'updated_by FK→users', 'updated_at'] },
-    { id: 't5e',  name: 'activity_logs',       description: 'Audit trail semua aksi penting untuk keamanan & debugging', columns: ['id uuid PK', 'user_id FK→users', 'action varchar', 'resource_type', 'resource_id uuid', 'ip_address inet', 'user_agent text', 'metadata jsonb', 'created_at'] },
-    { id: 't5f',  name: 'request_logs',        description: 'Log HTTP request: method, path, status, duration, user', columns: ['id uuid PK', 'method varchar', 'path text', 'status_code int', 'user_id FK→users', 'duration_ms int', 'ip_address inet', 'created_at'] },
-  ],
+    // Database Tables
+    { id: 't1',   name: 'users',               description: 'Data pengguna utama: email, password_hash, dan profile metadata', columns: ['id uuid PK', 'email varchar UNIQUE', 'name varchar', 'password_hash text', 'created_at timestamptz', 'updated_at timestamptz'] },
+    { id: 't2',   name: 'user_settings',       description: 'Konfigurasi preferensi pengguna seperti tema dan bahasa', columns: ['id uuid PK', 'user_id FK→users UNIQUE', 'theme varchar', 'notifications_enabled bool', 'updated_at timestamptz'] },
+  ]
 };
+
 
 // ============================================================
 // GROUP DEFINITIONS
@@ -678,8 +577,8 @@ function CanvasPage() {
   const [showRevision, setShowRevision] = useState(false);
   const [detailGroupId, setDetailGroupId] = useState<string | null>(null);
   const [addGroupId, setAddGroupId] = useState<string | null>(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [hasNoBlueprint, setHasNoBlueprint] = useState(false);
   const [generatingInitial, setGeneratingInitial] = useState(false);
 
