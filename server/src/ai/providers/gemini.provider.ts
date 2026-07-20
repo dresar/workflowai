@@ -49,7 +49,7 @@ export class GeminiProvider implements AIProvider {
 
         const finishReason = response.candidates?.[0]?.finishReason;
         // Enum or string check for MAX_TOKENS
-        if (finishReason === 'MAX_TOKENS' || finishReason === 2) {
+        if (finishReason === 'MAX_TOKENS') {
           currentPrompt = `This is what you generated so far:\n\n${fullContent}\n\nYour output was cut off because you reached the maximum token limit. PLEASE CONTINUE EXACTLY FROM WHERE YOU LEFT OFF. Do not repeat the previous text. Do not add introductory text. Just output the direct continuation of the last sentence/word.`;
           maxContinuations--;
           logAI({ provider: this.name }, `Hit MAX_TOKENS, continuing... (${maxContinuations} left)`);
