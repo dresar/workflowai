@@ -15,7 +15,7 @@ export async function listUsers(req: Request, res: Response, next: NextFunction)
 
 export async function createUser(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { name, email, role, password, isActive } = req.body;
+    const { name, email, role, password, isActive, promptTokens } = req.body;
     const [item] = await db.insert(users).values({
       id: crypto.randomUUID(),
       name,
@@ -23,6 +23,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       role: role || 'user',
       isActive: isActive !== undefined ? isActive : true,
       passwordHash: password || 'default-password-hash',
+      promptTokens: promptTokens !== undefined ? parseInt(promptTokens, 10) : 5,
     }).returning();
     sendCreated(res, item);
   } catch (err) { next(err); }
@@ -30,13 +31,14 @@ export async function createUser(req: Request, res: Response, next: NextFunction
 
 export async function updateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { name, email, role, password, isActive } = req.body;
+    const { name, email, role, password, isActive, promptTokens } = req.body;
     const updates: any = {};
     if (name !== undefined) updates.name = name;
     if (email !== undefined) updates.email = email;
     if (role !== undefined) updates.role = role;
     if (password !== undefined && password.trim() !== '') updates.passwordHash = password;
     if (isActive !== undefined) updates.isActive = isActive;
+    if (promptTokens !== undefined) updates.promptTokens = parseInt(promptTokens, 10);
     updates.updatedAt = new Date();
 
     const [item] = await db.update(users).set(updates).where(eq(users.id, req.params.id as string)).returning();

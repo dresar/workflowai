@@ -7,7 +7,9 @@ var __export = (target, all) => {
 // server/src/config/env.config.ts
 import * as dotenv from "dotenv";
 import { z } from "zod";
+import * as path from "path";
 dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), "server/.env") });
 var envSchema = z.object({
   PORT: z.string().default("3000").transform(Number),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
@@ -170,7 +172,7 @@ function notFoundHandler(req, res) {
 }
 
 // server/src/routes/index.ts
-import { Router as Router5 } from "express";
+import { Router as Router6 } from "express";
 
 // server/src/database/connection.ts
 import { neon } from "@neondatabase/serverless";
@@ -185,6 +187,8 @@ __export(schema_exports, {
   appSettings: () => appSettings,
   canvasStructures: () => canvasStructures,
   documentTypeEnum: () => documentTypeEnum,
+  feedbackTypeEnum: () => feedbackTypeEnum,
+  feedbacks: () => feedbacks,
   generateTypeEnum: () => generateTypeEnum,
   generatedDocuments: () => generatedDocuments,
   interviewAnswers: () => interviewAnswers,
@@ -209,7 +213,7 @@ __export(schema_exports, {
 });
 
 // server/src/database/schema/users.schema.ts
-import { pgTable, uuid, varchar, boolean, timestamp as timestamp2 } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, boolean, timestamp as timestamp2, integer } from "drizzle-orm/pg-core";
 import { pgEnum } from "drizzle-orm/pg-core";
 var userRoleEnum = pgEnum("user_role", ["user", "admin"]);
 var users = pgTable("users", {
@@ -219,13 +223,14 @@ var users = pgTable("users", {
   passwordHash: varchar("password_hash", { length: 255 }),
   role: userRoleEnum("role").notNull().default("user"),
   isActive: boolean("is_active").notNull().default(true),
+  promptTokens: integer("prompt_tokens").notNull().default(5),
   lastLoginAt: timestamp2("last_login_at", { withTimezone: true }),
   createdAt: timestamp2("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp2("updated_at", { withTimezone: true }).notNull().defaultNow()
 });
 
 // server/src/database/schema/technologies.schema.ts
-import { pgTable as pgTable2, uuid as uuid2, varchar as varchar2, text, boolean as boolean2, timestamp as timestamp3, integer } from "drizzle-orm/pg-core";
+import { pgTable as pgTable2, uuid as uuid2, varchar as varchar2, text, boolean as boolean2, timestamp as timestamp3, integer as integer2 } from "drizzle-orm/pg-core";
 var technologies = pgTable2("technologies", {
   id: uuid2("id").primaryKey().defaultRandom(),
   name: varchar2("name", { length: 255 }).notNull().unique(),
@@ -233,13 +238,13 @@ var technologies = pgTable2("technologies", {
   version: varchar2("version", { length: 50 }),
   description: text("description"),
   isActive: boolean2("is_active").notNull().default(true),
-  sortOrder: integer("sort_order").notNull().default(0),
+  sortOrder: integer2("sort_order").notNull().default(0),
   createdAt: timestamp3("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp3("updated_at", { withTimezone: true }).notNull().defaultNow()
 });
 
 // server/src/database/schema/interview-questions.schema.ts
-import { pgTable as pgTable3, uuid as uuid3, text as text2, varchar as varchar3, boolean as boolean3, integer as integer2, timestamp as timestamp4 } from "drizzle-orm/pg-core";
+import { pgTable as pgTable3, uuid as uuid3, text as text2, varchar as varchar3, boolean as boolean3, integer as integer3, timestamp as timestamp4 } from "drizzle-orm/pg-core";
 import { pgEnum as pgEnum2 } from "drizzle-orm/pg-core";
 import { jsonb } from "drizzle-orm/pg-core";
 var questionTypeEnum = pgEnum2("question_type", [
@@ -256,7 +261,7 @@ var interviewQuestions = pgTable3("interview_questions", {
   type: questionTypeEnum("type").notNull(),
   options: jsonb("options").$type(),
   isRequired: boolean3("is_required").notNull().default(false),
-  sortOrder: integer2("sort_order").notNull().default(0),
+  sortOrder: integer3("sort_order").notNull().default(0),
   isActive: boolean3("is_active").notNull().default(true),
   category: varchar3("category", { length: 100 }),
   createdAt: timestamp4("created_at", { withTimezone: true }).notNull().defaultNow()
@@ -328,7 +333,7 @@ var canvasStructures = pgTable7("canvas_structures", {
 });
 
 // server/src/database/schema/generated-documents.schema.ts
-import { pgTable as pgTable8, uuid as uuid8, text as text4, varchar as varchar6, boolean as boolean6, integer as integer3, timestamp as timestamp9 } from "drizzle-orm/pg-core";
+import { pgTable as pgTable8, uuid as uuid8, text as text4, varchar as varchar6, boolean as boolean6, integer as integer4, timestamp as timestamp9 } from "drizzle-orm/pg-core";
 import { pgEnum as pgEnum4 } from "drizzle-orm/pg-core";
 var documentTypeEnum = pgEnum4("document_type", [
   "prd",
@@ -344,17 +349,17 @@ var generatedDocuments = pgTable8("generated_documents", {
   projectId: uuid8("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   type: documentTypeEnum("type").notNull(),
   content: text4("content").notNull(),
-  version: integer3("version").notNull().default(1),
+  version: integer4("version").notNull().default(1),
   providerUsed: varchar6("provider_used", { length: 100 }),
   modelUsed: varchar6("model_used", { length: 255 }),
-  tokensUsed: integer3("tokens_used"),
-  generationTimeMs: integer3("generation_time_ms"),
+  tokensUsed: integer4("tokens_used"),
+  generationTimeMs: integer4("generation_time_ms"),
   isCurrent: boolean6("is_current").notNull().default(true),
   createdAt: timestamp9("created_at", { withTimezone: true }).notNull().defaultNow()
 });
 
 // server/src/database/schema/ai-providers.schema.ts
-import { pgTable as pgTable9, uuid as uuid9, varchar as varchar7, text as text5, boolean as boolean7, integer as integer4, timestamp as timestamp10 } from "drizzle-orm/pg-core";
+import { pgTable as pgTable9, uuid as uuid9, varchar as varchar7, text as text5, boolean as boolean7, integer as integer5, timestamp as timestamp10 } from "drizzle-orm/pg-core";
 var aiProviders = pgTable9("ai_providers", {
   id: uuid9("id").primaryKey().defaultRandom(),
   name: varchar7("name", { length: 100 }).notNull().unique(),
@@ -362,15 +367,15 @@ var aiProviders = pgTable9("ai_providers", {
   baseUrl: text5("base_url"),
   defaultModel: varchar7("default_model", { length: 255 }).notNull(),
   isActive: boolean7("is_active").notNull().default(true),
-  priority: integer4("priority").notNull().default(99),
-  timeoutMs: integer4("timeout_ms").notNull().default(6e4),
-  maxRetries: integer4("max_retries").notNull().default(3),
+  priority: integer5("priority").notNull().default(99),
+  timeoutMs: integer5("timeout_ms").notNull().default(6e4),
+  maxRetries: integer5("max_retries").notNull().default(3),
   createdAt: timestamp10("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp10("updated_at", { withTimezone: true }).notNull().defaultNow()
 });
 
 // server/src/database/schema/api-keys.schema.ts
-import { pgTable as pgTable10, uuid as uuid10, varchar as varchar8, text as text6, boolean as boolean8, integer as integer5, timestamp as timestamp11 } from "drizzle-orm/pg-core";
+import { pgTable as pgTable10, uuid as uuid10, varchar as varchar8, text as text6, boolean as boolean8, integer as integer6, timestamp as timestamp11 } from "drizzle-orm/pg-core";
 var apiKeys = pgTable10("api_keys", {
   id: uuid10("id").primaryKey().defaultRandom(),
   providerId: uuid10("provider_id").notNull().references(() => aiProviders.id, { onDelete: "cascade" }),
@@ -378,11 +383,11 @@ var apiKeys = pgTable10("api_keys", {
   keyEncrypted: text6("key_encrypted").notNull(),
   keyPreview: varchar8("key_preview", { length: 20 }).notNull(),
   isActive: boolean8("is_active").notNull().default(true),
-  priority: integer5("priority").notNull().default(99),
-  totalRequests: integer5("total_requests").notNull().default(0),
-  failedRequests: integer5("failed_requests").notNull().default(0),
-  quotaLimit: integer5("quota_limit"),
-  quotaUsed: integer5("quota_used").notNull().default(0),
+  priority: integer6("priority").notNull().default(99),
+  totalRequests: integer6("total_requests").notNull().default(0),
+  failedRequests: integer6("failed_requests").notNull().default(0),
+  quotaLimit: integer6("quota_limit"),
+  quotaUsed: integer6("quota_used").notNull().default(0),
   cooldownUntil: timestamp11("cooldown_until", { withTimezone: true }),
   lastUsedAt: timestamp11("last_used_at", { withTimezone: true }),
   createdAt: timestamp11("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -390,7 +395,7 @@ var apiKeys = pgTable10("api_keys", {
 });
 
 // server/src/database/schema/rotation-config.schema.ts
-import { pgTable as pgTable11, uuid as uuid11, boolean as boolean9, integer as integer6, timestamp as timestamp12 } from "drizzle-orm/pg-core";
+import { pgTable as pgTable11, uuid as uuid11, boolean as boolean9, integer as integer7, timestamp as timestamp12 } from "drizzle-orm/pg-core";
 import { pgEnum as pgEnum5 } from "drizzle-orm/pg-core";
 import { jsonb as jsonb4 } from "drizzle-orm/pg-core";
 var rotationStrategyEnum = pgEnum5("rotation_strategy", [
@@ -404,15 +409,15 @@ var rotationConfig = pgTable11("rotation_config", {
   strategy: rotationStrategyEnum("strategy").notNull().default("round_robin"),
   autoRotation: boolean9("auto_rotation").notNull().default(true),
   autoRetry: boolean9("auto_retry").notNull().default(true),
-  maxRetries: integer6("max_retries").notNull().default(3),
-  timeoutSeconds: integer6("timeout_seconds").notNull().default(60),
-  cooldownMinutes: integer6("cooldown_minutes").notNull().default(5),
+  maxRetries: integer7("max_retries").notNull().default(3),
+  timeoutSeconds: integer7("timeout_seconds").notNull().default(60),
+  cooldownMinutes: integer7("cooldown_minutes").notNull().default(5),
   providerOrder: jsonb4("provider_order").$type().notNull().default([]),
   updatedAt: timestamp12("updated_at", { withTimezone: true }).notNull().defaultNow()
 });
 
 // server/src/database/schema/prompt-templates.schema.ts
-import { pgTable as pgTable12, uuid as uuid12, varchar as varchar9, text as text7, boolean as boolean10, integer as integer7, decimal, timestamp as timestamp13 } from "drizzle-orm/pg-core";
+import { pgTable as pgTable12, uuid as uuid12, varchar as varchar9, text as text7, boolean as boolean10, integer as integer8, decimal, timestamp as timestamp13 } from "drizzle-orm/pg-core";
 import { pgEnum as pgEnum6 } from "drizzle-orm/pg-core";
 var generateTypeEnum = pgEnum6("generate_type", [
   "prd",
@@ -433,17 +438,17 @@ var promptTemplates = pgTable12("prompt_templates", {
   userPrompt: text7("user_prompt").notNull(),
   model: varchar9("model", { length: 255 }),
   temperature: decimal("temperature", { precision: 3, scale: 2 }).default("0.7"),
-  maxTokens: integer7("max_tokens").default(8192),
+  maxTokens: integer8("max_tokens").default(8192),
   topP: decimal("top_p", { precision: 3, scale: 2 }).default("0.9"),
   isActive: boolean10("is_active").notNull().default(true),
   isDefault: boolean10("is_default").notNull().default(false),
-  version: integer7("version").notNull().default(1),
+  version: integer8("version").notNull().default(1),
   createdAt: timestamp13("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp13("updated_at", { withTimezone: true }).notNull().defaultNow()
 });
 
 // server/src/database/schema/project-templates.schema.ts
-import { pgTable as pgTable13, uuid as uuid13, varchar as varchar10, text as text8, boolean as boolean11, integer as integer8, timestamp as timestamp14 } from "drizzle-orm/pg-core";
+import { pgTable as pgTable13, uuid as uuid13, varchar as varchar10, text as text8, boolean as boolean11, integer as integer9, timestamp as timestamp14 } from "drizzle-orm/pg-core";
 import { jsonb as jsonb5 } from "drizzle-orm/pg-core";
 var projectTemplates = pgTable13("project_templates", {
   id: uuid13("id").primaryKey().defaultRandom(),
@@ -453,13 +458,13 @@ var projectTemplates = pgTable13("project_templates", {
   ideaTemplate: text8("idea_template").notNull(),
   defaultTechnologies: jsonb5("default_technologies").$type().default({}),
   isActive: boolean11("is_active").notNull().default(true),
-  sortOrder: integer8("sort_order").notNull().default(0),
+  sortOrder: integer9("sort_order").notNull().default(0),
   createdAt: timestamp14("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp14("updated_at", { withTimezone: true }).notNull().defaultNow()
 });
 
 // server/src/database/schema/request-logs.schema.ts
-import { pgTable as pgTable14, uuid as uuid14, varchar as varchar11, text as text9, boolean as boolean12, integer as integer9, timestamp as timestamp15 } from "drizzle-orm/pg-core";
+import { pgTable as pgTable14, uuid as uuid14, varchar as varchar11, text as text9, boolean as boolean12, integer as integer10, timestamp as timestamp15 } from "drizzle-orm/pg-core";
 import { jsonb as jsonb6 } from "drizzle-orm/pg-core";
 var requestLogs = pgTable14("request_logs", {
   id: uuid14("id").primaryKey().defaultRandom(),
@@ -469,10 +474,10 @@ var requestLogs = pgTable14("request_logs", {
   providerName: varchar11("provider_name", { length: 100 }),
   model: varchar11("model", { length: 255 }),
   apiKeyId: uuid14("api_key_id").references(() => apiKeys.id, { onDelete: "set null" }),
-  promptTokens: integer9("prompt_tokens"),
-  completionTokens: integer9("completion_tokens"),
-  totalTokens: integer9("total_tokens"),
-  latencyMs: integer9("latency_ms"),
+  promptTokens: integer10("prompt_tokens"),
+  completionTokens: integer10("completion_tokens"),
+  totalTokens: integer10("total_tokens"),
+  latencyMs: integer10("latency_ms"),
   success: boolean12("success").notNull().default(false),
   errorMessage: text9("error_message"),
   rotationEvents: jsonb6("rotation_events").$type().default([]),
@@ -512,6 +517,18 @@ var appSettings = pgTable16("app_settings", {
   type: settingTypeEnum("type").notNull().default("string"),
   description: text11("description"),
   updatedAt: timestamp17("updated_at", { withTimezone: true }).notNull().defaultNow()
+});
+
+// server/src/database/schema/feedbacks.schema.ts
+import { pgTable as pgTable17, uuid as uuid16, text as text12, timestamp as timestamp18 } from "drizzle-orm/pg-core";
+import { pgEnum as pgEnum9 } from "drizzle-orm/pg-core";
+var feedbackTypeEnum = pgEnum9("feedback_type", ["bug", "feature"]);
+var feedbacks = pgTable17("feedbacks", {
+  id: uuid16("id").primaryKey().defaultRandom(),
+  userId: uuid16("user_id").references(() => users.id, { onDelete: "set null" }),
+  type: feedbackTypeEnum("type").notNull(),
+  content: text12("content").notNull(),
+  createdAt: timestamp18("created_at", { withTimezone: true }).notNull().defaultNow()
 });
 
 // server/src/database/connection.ts
@@ -590,7 +607,7 @@ import { eq, and, desc } from "drizzle-orm";
 // server/src/shared/utils/pagination.util.ts
 function parsePagination(query) {
   const page = Math.max(1, parseInt(String(query.page ?? "1"), 10) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(String(query.limit ?? "20"), 10) || 20));
+  const limit = Math.min(1e3, Math.max(1, parseInt(String(query.limit ?? "20"), 10) || 20));
   return { page, limit };
 }
 function calcOffset(page, limit) {
@@ -914,8 +931,8 @@ var GeminiProvider = class {
         );
         const result = await Promise.race([generatePromise, timeoutPromise]);
         const response = result.response;
-        const text12 = response.text();
-        fullContent += text12;
+        const text13 = response.text();
+        fullContent += text13;
         const usage = response.usageMetadata;
         if (usage) {
           totalPromptTokens += usage.promptTokenCount ?? 0;
@@ -998,8 +1015,8 @@ var GroqProvider = class {
           (_, reject) => setTimeout(() => reject(new AITimeoutError(this.name, timeoutMs)), timeoutMs)
         );
         const result = await Promise.race([generatePromise, timeoutPromise]);
-        const text12 = result.choices[0]?.message?.content ?? "";
-        fullContent += text12;
+        const text13 = result.choices[0]?.message?.content ?? "";
+        fullContent += text13;
         const usage = result.usage;
         if (usage) {
           totalPromptTokens += usage.prompt_tokens ?? 0;
@@ -1669,6 +1686,16 @@ async function authMiddleware(req, _res, next) {
     req.user = decoded;
     next();
   } catch (err) {
+    if (env.NODE_ENV === "development") {
+      try {
+        const [devUser] = await db.select().from(users).where(eq5(users.email, "user@app.com")).limit(1);
+        if (devUser) {
+          req.user = { id: devUser.id, email: devUser.email, role: devUser.role };
+          return next();
+        }
+      } catch (e) {
+      }
+    }
     next(new UnauthorizedError("Invalid or expired token"));
   }
 }
@@ -2536,9 +2563,32 @@ async function generatePrompt(req, res, next) {
   }
 }
 
+// server/src/middleware/prompt-tokens.middleware.ts
+import { eq as eq9 } from "drizzle-orm";
+async function checkPromptTokens(req, res, next) {
+  const userId = req.user?.id;
+  if (!userId) return next();
+  try {
+    const [user] = await db.select().from(users).where(eq9(users.id, userId)).limit(1);
+    if (!user) {
+      return next();
+    }
+    if (user.promptTokens <= 0 && user.role !== "admin") {
+      return next(new ForbiddenError("PROMPT_LIMIT_EXCEEDED"));
+    }
+    if (user.role !== "admin") {
+      await db.update(users).set({ promptTokens: user.promptTokens - 1 }).where(eq9(users.id, userId));
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
 // server/src/routes/generate.routes.ts
 var router2 = Router2();
 router2.use(authMiddleware);
+router2.use(checkPromptTokens);
 router2.post("/canvas/:projectId", generateCanvas);
 router2.post("/prd/:projectId", generatePRD);
 router2.post("/architecture/:projectId", generateArchitecture);
@@ -2553,14 +2603,14 @@ import { Router as Router3 } from "express";
 
 // server/src/middleware/admin-auth.middleware.ts
 import jwt2 from "jsonwebtoken";
-import { eq as eq9 } from "drizzle-orm";
+import { eq as eq10 } from "drizzle-orm";
 async function adminAuthMiddleware(req, _res, next) {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
   if (!token) {
     if (env.NODE_ENV === "development") {
       try {
-        const [devAdmin] = await db.select().from(users).where(eq9(users.role, "admin")).limit(1);
+        const [devAdmin] = await db.select().from(users).where(eq10(users.role, "admin")).limit(1);
         if (devAdmin) {
           req.user = { id: devAdmin.id, email: devAdmin.email, role: devAdmin.role };
           return next();
@@ -2573,17 +2623,34 @@ async function adminAuthMiddleware(req, _res, next) {
   try {
     const decoded = jwt2.verify(token, env.JWT_SECRET);
     if (decoded.role !== "admin") {
+      if (env.NODE_ENV === "development") {
+        const [devAdmin] = await db.select().from(users).where(eq10(users.role, "admin")).limit(1);
+        if (devAdmin) {
+          req.user = { id: devAdmin.id, email: devAdmin.email, role: devAdmin.role };
+          return next();
+        }
+      }
       return next(new ForbiddenError("Admin privileges required"));
     }
     req.user = decoded;
     next();
   } catch (err) {
+    if (env.NODE_ENV === "development") {
+      try {
+        const [devAdmin] = await db.select().from(users).where(eq10(users.role, "admin")).limit(1);
+        if (devAdmin) {
+          req.user = { id: devAdmin.id, email: devAdmin.email, role: devAdmin.role };
+          return next();
+        }
+      } catch (e) {
+      }
+    }
     next(new UnauthorizedError("Invalid or expired token"));
   }
 }
 
 // server/src/modules/admin/dashboard/dashboard.repository.ts
-import { eq as eq10, sql as sql4, gte } from "drizzle-orm";
+import { eq as eq11, sql as sql4, gte } from "drizzle-orm";
 var DashboardRepository = class {
   async getStats() {
     const [
@@ -2596,11 +2663,11 @@ var DashboardRepository = class {
       db.select({ count: sql4`count(*)` }).from(projects),
       db.select({ count: sql4`count(*)` }).from(generatedDocuments),
       db.select({ count: sql4`count(*)` }).from(requestLogs),
-      db.select({ count: sql4`count(*)` }).from(apiKeys).where(eq10(apiKeys.isActive, true)),
-      db.select({ count: sql4`count(*)` }).from(aiProviders).where(eq10(aiProviders.isActive, true))
+      db.select({ count: sql4`count(*)` }).from(apiKeys).where(eq11(apiKeys.isActive, true)),
+      db.select({ count: sql4`count(*)` }).from(aiProviders).where(eq11(aiProviders.isActive, true))
     ]);
-    const prdCount = await db.select({ count: sql4`count(*)` }).from(generatedDocuments).where(eq10(generatedDocuments.type, "prd"));
-    const promptCount = await db.select({ count: sql4`count(*)` }).from(generatedDocuments).where(eq10(generatedDocuments.type, "prompt"));
+    const prdCount = await db.select({ count: sql4`count(*)` }).from(generatedDocuments).where(eq11(generatedDocuments.type, "prd"));
+    const promptCount = await db.select({ count: sql4`count(*)` }).from(generatedDocuments).where(eq11(generatedDocuments.type, "prompt"));
     return {
       totalProjects: Number(totalProjects.count),
       totalDocuments: Number(totalDocs.count),
@@ -2624,7 +2691,7 @@ var DashboardRepository = class {
     const rows = await db.select({
       provider: requestLogs.providerName,
       count: sql4`count(*)`
-    }).from(requestLogs).where(eq10(requestLogs.success, true)).groupBy(requestLogs.providerName).orderBy(sql4`count(*) DESC`);
+    }).from(requestLogs).where(eq11(requestLogs.success, true)).groupBy(requestLogs.providerName).orderBy(sql4`count(*) DESC`);
     return rows;
   }
 };
@@ -2658,13 +2725,13 @@ async function getProviderDistribution(req, res, next) {
 }
 
 // server/src/modules/admin/provider/provider.repository.ts
-import { eq as eq11, asc as asc4, sql as sql5 } from "drizzle-orm";
+import { eq as eq12, asc as asc4, sql as sql5 } from "drizzle-orm";
 var ProviderRepository = class {
   async findAll() {
     return db.select().from(aiProviders).orderBy(asc4(aiProviders.priority));
   }
   async findById(id) {
-    const [row] = await db.select().from(aiProviders).where(eq11(aiProviders.id, id)).limit(1);
+    const [row] = await db.select().from(aiProviders).where(eq12(aiProviders.id, id)).limit(1);
     return row;
   }
   async create(data) {
@@ -2672,11 +2739,11 @@ var ProviderRepository = class {
     return row;
   }
   async update(id, data) {
-    const [row] = await db.update(aiProviders).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq11(aiProviders.id, id)).returning();
+    const [row] = await db.update(aiProviders).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq12(aiProviders.id, id)).returning();
     return row;
   }
   async delete(id) {
-    const result = await db.delete(aiProviders).where(eq11(aiProviders.id, id));
+    const result = await db.delete(aiProviders).where(eq12(aiProviders.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 };
@@ -2684,7 +2751,7 @@ var ApiKeyRepository = class {
   async findAll(params) {
     const { page, limit, providerId } = params;
     const offset = calcOffset(page, limit);
-    const condition = providerId ? eq11(apiKeys.providerId, providerId) : void 0;
+    const condition = providerId ? eq12(apiKeys.providerId, providerId) : void 0;
     const [items, [{ count }]] = await Promise.all([
       db.select().from(apiKeys).where(condition).orderBy(asc4(apiKeys.priority)).limit(limit).offset(offset),
       db.select({ count: sql5`count(*)` }).from(apiKeys).where(condition)
@@ -2695,7 +2762,7 @@ var ApiKeyRepository = class {
     };
   }
   async findById(id) {
-    const [row] = await db.select().from(apiKeys).where(eq11(apiKeys.id, id)).limit(1);
+    const [row] = await db.select().from(apiKeys).where(eq12(apiKeys.id, id)).limit(1);
     return row;
   }
   async create(data) {
@@ -2711,15 +2778,15 @@ var ApiKeyRepository = class {
     return { ...row, keyEncrypted: void 0 };
   }
   async update(id, data) {
-    const [row] = await db.update(apiKeys).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq11(apiKeys.id, id)).returning();
+    const [row] = await db.update(apiKeys).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq12(apiKeys.id, id)).returning();
     return row;
   }
   async delete(id) {
-    const result = await db.delete(apiKeys).where(eq11(apiKeys.id, id));
+    const result = await db.delete(apiKeys).where(eq12(apiKeys.id, id));
     return (result.rowCount ?? 0) > 0;
   }
   async resetQuota(id) {
-    const [row] = await db.update(apiKeys).set({ quotaUsed: 0, cooldownUntil: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq11(apiKeys.id, id)).returning();
+    const [row] = await db.update(apiKeys).set({ quotaUsed: 0, cooldownUntil: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq12(apiKeys.id, id)).returning();
     return row;
   }
   async getDecryptedKey(id) {
@@ -2847,7 +2914,7 @@ async function updateRotationConfig(req, res, next) {
 }
 
 // server/src/modules/admin/prompt-template/prompt-template.controller.ts
-import { eq as eq12 } from "drizzle-orm";
+import { eq as eq13 } from "drizzle-orm";
 async function listPromptTemplates(req, res, next) {
   try {
     const items = await db.select().from(promptTemplates);
@@ -2858,7 +2925,7 @@ async function listPromptTemplates(req, res, next) {
 }
 async function getPromptTemplateByType(req, res, next) {
   try {
-    const items = await db.select().from(promptTemplates).where(eq12(promptTemplates.generateType, req.params.type));
+    const items = await db.select().from(promptTemplates).where(eq13(promptTemplates.generateType, req.params.type));
     sendSuccess(res, items);
   } catch (err) {
     next(err);
@@ -2866,7 +2933,7 @@ async function getPromptTemplateByType(req, res, next) {
 }
 async function updatePromptTemplate(req, res, next) {
   try {
-    const [item] = await db.update(promptTemplates).set({ ...req.body, updatedAt: /* @__PURE__ */ new Date() }).where(eq12(promptTemplates.id, req.params.id)).returning();
+    const [item] = await db.update(promptTemplates).set({ ...req.body, updatedAt: /* @__PURE__ */ new Date() }).where(eq13(promptTemplates.id, req.params.id)).returning();
     if (!item) throw new NotFoundError("Prompt template");
     sendSuccess(res, item, "Template updated");
   } catch (err) {
@@ -2875,25 +2942,63 @@ async function updatePromptTemplate(req, res, next) {
 }
 async function publishPromptTemplate(req, res, next) {
   try {
-    const [current] = await db.select().from(promptTemplates).where(eq12(promptTemplates.id, req.params.id)).limit(1);
+    const [current] = await db.select().from(promptTemplates).where(eq13(promptTemplates.id, req.params.id)).limit(1);
     if (!current) throw new NotFoundError("Prompt template");
-    await db.update(promptTemplates).set({ isDefault: false }).where(eq12(promptTemplates.generateType, current.generateType));
-    const [item] = await db.update(promptTemplates).set({ isDefault: true }).where(eq12(promptTemplates.id, req.params.id)).returning();
+    await db.update(promptTemplates).set({ isDefault: false }).where(eq13(promptTemplates.generateType, current.generateType));
+    const [item] = await db.update(promptTemplates).set({ isDefault: true }).where(eq13(promptTemplates.id, req.params.id)).returning();
     sendSuccess(res, item, "Template published as default");
+  } catch (err) {
+    next(err);
+  }
+}
+async function optimizePrompt(req, res, next) {
+  try {
+    const { promptText, instructions, generateType, role } = req.body;
+    if (!promptText) {
+      throw new Error("promptText is required");
+    }
+    const rotationEngine = new RotationEngine();
+    const selectedKey = await rotationEngine.selectKey();
+    const providerInstance = getProvider(selectedKey.providerName);
+    const systemPrompt = `You are an expert Prompt Engineer. Your task is to rewrite and optimize prompt templates for a software architect generator. Keep all templating variables (e.g. {{context}}, {{language}}, {{tech_stack}}, {{existing_prd}}, etc.) intact. Output ONLY the optimized prompt text without any explanations or markdown blocks.`;
+    const userPrompt = `Optimize this prompt template to be highly detailed, comprehensive, and structured, so that the AI model will generate a very long, robust, and professional output for the target "${generateType}" (${role} prompt).
+
+Additional instructions/customizations: ${instructions || "None"}
+
+Current template text:
+"""
+${promptText}
+"""
+
+Return ONLY the optimized prompt text. Do not wrap the response in markdown blocks.`;
+    const result = await providerInstance.call({
+      apiKey: selectedKey.apiKey,
+      model: selectedKey.model,
+      systemPrompt,
+      userPrompt,
+      temperature: 0.7,
+      maxTokens: 8192,
+      topP: 0.9
+    });
+    let content = result.content || "";
+    if (content.startsWith("```")) {
+      content = content.replace(/^```[a-zA-Z]*\n/, "").replace(/\n```$/, "");
+    }
+    sendSuccess(res, { optimizedText: content.trim() });
   } catch (err) {
     next(err);
   }
 }
 
 // server/src/modules/admin/logs/logs.controller.ts
-import { eq as eq13, desc as desc3, gte as gte2, sql as sql6 } from "drizzle-orm";
+import { eq as eq14, desc as desc3, gte as gte2, sql as sql6 } from "drizzle-orm";
 async function getActivityLogs(req, res, next) {
   try {
     const pagination = parsePagination(req.query);
     const offset = calcOffset(pagination.page, pagination.limit);
     const level = typeof req.query.level === "string" ? req.query.level : void 0;
     const category = typeof req.query.category === "string" ? req.query.category : void 0;
-    const condition = level ? eq13(activityLogs.level, level) : category ? eq13(activityLogs.category, category) : void 0;
+    const condition = level ? eq14(activityLogs.level, level) : category ? eq14(activityLogs.category, category) : void 0;
     const [items, [{ count }]] = await Promise.all([
       db.select().from(activityLogs).where(condition).orderBy(desc3(activityLogs.createdAt)).limit(pagination.limit).offset(offset),
       db.select({ count: sql6`count(*)` }).from(activityLogs).where(condition)
@@ -2962,7 +3067,7 @@ async function getAreaChart(req, res, next) {
 }
 
 // server/src/modules/admin/settings/settings.controller.ts
-import { eq as eq14 } from "drizzle-orm";
+import { eq as eq15 } from "drizzle-orm";
 async function getAllSettings(req, res, next) {
   try {
     const items = await db.select().from(appSettings);
@@ -2979,9 +3084,9 @@ async function updateSettings(req, res, next) {
   try {
     const updates = req.body;
     const promises = Object.entries(updates).map(async ([key, value]) => {
-      const existing = await db.select().from(appSettings).where(eq14(appSettings.key, key)).limit(1);
+      const existing = await db.select().from(appSettings).where(eq15(appSettings.key, key)).limit(1);
       if (existing.length > 0) {
-        return db.update(appSettings).set({ value, updatedAt: /* @__PURE__ */ new Date() }).where(eq14(appSettings.key, key));
+        return db.update(appSettings).set({ value, updatedAt: /* @__PURE__ */ new Date() }).where(eq15(appSettings.key, key));
       }
       return db.insert(appSettings).values({ key, value, type: "string" });
     });
@@ -2993,7 +3098,7 @@ async function updateSettings(req, res, next) {
 }
 async function getSetting(req, res, next) {
   try {
-    const [setting] = await db.select().from(appSettings).where(eq14(appSettings.key, req.params.key)).limit(1);
+    const [setting] = await db.select().from(appSettings).where(eq15(appSettings.key, req.params.key)).limit(1);
     sendSuccess(res, setting ?? null);
   } catch (err) {
     next(err);
@@ -3002,10 +3107,10 @@ async function getSetting(req, res, next) {
 async function updateSetting(req, res, next) {
   try {
     const { value } = req.body;
-    const existing = await db.select().from(appSettings).where(eq14(appSettings.key, req.params.key)).limit(1);
+    const existing = await db.select().from(appSettings).where(eq15(appSettings.key, req.params.key)).limit(1);
     let result;
     if (existing.length > 0) {
-      [result] = await db.update(appSettings).set({ value, updatedAt: /* @__PURE__ */ new Date() }).where(eq14(appSettings.key, req.params.key)).returning();
+      [result] = await db.update(appSettings).set({ value, updatedAt: /* @__PURE__ */ new Date() }).where(eq15(appSettings.key, req.params.key)).returning();
     } else {
       [result] = await db.insert(appSettings).values({ key: req.params.key, value, type: "string" }).returning();
     }
@@ -3016,7 +3121,7 @@ async function updateSetting(req, res, next) {
 }
 
 // server/src/modules/admin/users/users.controller.ts
-import { eq as eq15, asc as asc5 } from "drizzle-orm";
+import { eq as eq16, asc as asc5 } from "drizzle-orm";
 import crypto3 from "crypto";
 async function listUsers(req, res, next) {
   try {
@@ -3028,14 +3133,15 @@ async function listUsers(req, res, next) {
 }
 async function createUser(req, res, next) {
   try {
-    const { name, email, role, password, isActive } = req.body;
+    const { name, email, role, password, isActive, promptTokens } = req.body;
     const [item] = await db.insert(users).values({
       id: crypto3.randomUUID(),
       name,
       email,
       role: role || "user",
       isActive: isActive !== void 0 ? isActive : true,
-      passwordHash: password || "default-password-hash"
+      passwordHash: password || "default-password-hash",
+      promptTokens: promptTokens !== void 0 ? parseInt(promptTokens, 10) : 5
     }).returning();
     sendCreated(res, item);
   } catch (err) {
@@ -3044,15 +3150,16 @@ async function createUser(req, res, next) {
 }
 async function updateUser(req, res, next) {
   try {
-    const { name, email, role, password, isActive } = req.body;
+    const { name, email, role, password, isActive, promptTokens } = req.body;
     const updates = {};
     if (name !== void 0) updates.name = name;
     if (email !== void 0) updates.email = email;
     if (role !== void 0) updates.role = role;
     if (password !== void 0 && password.trim() !== "") updates.passwordHash = password;
     if (isActive !== void 0) updates.isActive = isActive;
+    if (promptTokens !== void 0) updates.promptTokens = parseInt(promptTokens, 10);
     updates.updatedAt = /* @__PURE__ */ new Date();
-    const [item] = await db.update(users).set(updates).where(eq15(users.id, req.params.id)).returning();
+    const [item] = await db.update(users).set(updates).where(eq16(users.id, req.params.id)).returning();
     if (!item) throw new NotFoundError("User");
     sendSuccess(res, item, "User updated");
   } catch (err) {
@@ -3061,8 +3168,36 @@ async function updateUser(req, res, next) {
 }
 async function deleteUser(req, res, next) {
   try {
-    const result = await db.delete(users).where(eq15(users.id, req.params.id));
+    const result = await db.delete(users).where(eq16(users.id, req.params.id));
     if ((result.rowCount ?? 0) === 0) throw new NotFoundError("User");
+    sendNoContent(res);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// server/src/modules/admin/feedbacks/feedbacks.controller.ts
+import { eq as eq17, desc as desc4 } from "drizzle-orm";
+async function listFeedbacks(req, res, next) {
+  try {
+    const items = await db.select({
+      id: feedbacks.id,
+      userId: feedbacks.userId,
+      userName: users.name,
+      userEmail: users.email,
+      type: feedbacks.type,
+      content: feedbacks.content,
+      createdAt: feedbacks.createdAt
+    }).from(feedbacks).leftJoin(users, eq17(feedbacks.userId, users.id)).orderBy(desc4(feedbacks.createdAt));
+    sendSuccess(res, items);
+  } catch (err) {
+    next(err);
+  }
+}
+async function deleteFeedback(req, res, next) {
+  try {
+    const result = await db.delete(feedbacks).where(eq17(feedbacks.id, req.params.id));
+    if ((result.rowCount ?? 0) === 0) throw new NotFoundError("Feedback");
     sendNoContent(res);
   } catch (err) {
     next(err);
@@ -3079,6 +3214,8 @@ router3.get("/users", listUsers);
 router3.post("/users", createUser);
 router3.put("/users/:id", updateUser);
 router3.delete("/users/:id", deleteUser);
+router3.get("/feedbacks", listFeedbacks);
+router3.delete("/feedbacks/:id", deleteFeedback);
 router3.get("/providers", listProviders);
 router3.post("/providers", createProvider);
 router3.put("/providers/:id", updateProvider);
@@ -3096,6 +3233,7 @@ router3.put("/technologies/:id", updateTechnology);
 router3.delete("/technologies/:id", deleteTechnology);
 router3.patch("/technologies/:id/toggle", toggleTechnology);
 router3.get("/prompt-templates", listPromptTemplates);
+router3.post("/prompt-templates/optimize", optimizePrompt);
 router3.get("/prompt-templates/:type", getPromptTemplateByType);
 router3.put("/prompt-templates/:id", updatePromptTemplate);
 router3.post("/prompt-templates/:id/publish", publishPromptTemplate);
@@ -3113,18 +3251,18 @@ var admin_routes_default = router3;
 import { Router as Router4 } from "express";
 
 // server/src/modules/auth/auth.repository.ts
-import { eq as eq16 } from "drizzle-orm";
+import { eq as eq18 } from "drizzle-orm";
 var AuthRepository = class {
   async findByEmail(email) {
-    const [row] = await db.select().from(users).where(eq16(users.email, email)).limit(1);
+    const [row] = await db.select().from(users).where(eq18(users.email, email)).limit(1);
     return row;
   }
   async findById(id) {
-    const [row] = await db.select().from(users).where(eq16(users.id, id)).limit(1);
+    const [row] = await db.select().from(users).where(eq18(users.id, id)).limit(1);
     return row;
   }
   async updateLastLogin(id) {
-    await db.update(users).set({ lastLoginAt: /* @__PURE__ */ new Date() }).where(eq16(users.id, id));
+    await db.update(users).set({ lastLoginAt: /* @__PURE__ */ new Date() }).where(eq18(users.id, id));
   }
   async create(data) {
     const [row] = await db.insert(users).values(data).returning();
@@ -3208,6 +3346,17 @@ var AuthService = class {
       throw new UnauthorizedError("Invalid or expired refresh token");
     }
   }
+  async getProfile(id) {
+    const user = await this.repo.findById(id);
+    if (!user) throw new UnauthorizedError("User not found");
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      promptTokens: user.promptTokens
+    };
+  }
 };
 
 // server/src/modules/auth/auth.controller.ts
@@ -3237,20 +3386,50 @@ async function refresh(req, res, next) {
     next(err);
   }
 }
+async function getMe(req, res, next) {
+  try {
+    const userId = req.user?.id;
+    const user = await service4.getProfile(userId);
+    sendSuccess(res, user);
+  } catch (err) {
+    next(err);
+  }
+}
 
 // server/src/routes/auth.routes.ts
 var router4 = Router4();
 router4.post("/login", login);
 router4.post("/register", register);
 router4.post("/refresh", refresh);
+router4.get("/me", authMiddleware, getMe);
 var auth_routes_default = router4;
 
-// server/src/routes/index.ts
+// server/src/routes/feedback.routes.ts
+import { Router as Router5 } from "express";
 var router5 = Router5();
-router5.get("/health", (req, res) => {
+router5.use(authMiddleware);
+router5.post("/", async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    const { type, content } = req.body;
+    const [row] = await db.insert(feedbacks).values({
+      userId,
+      type,
+      content
+    }).returning();
+    sendCreated(res, row, "Feedback submitted successfully");
+  } catch (err) {
+    next(err);
+  }
+});
+var feedback_routes_default = router5;
+
+// server/src/routes/index.ts
+var router6 = Router6();
+router6.get("/health", (req, res) => {
   res.json({ success: true, message: "AI Software Architect API is running", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
 });
-router5.get("/health-dashboard", async (req, res) => {
+router6.get("/health-dashboard", async (req, res) => {
   let dbStatus = "Disconnected";
   let dbLatency = 0;
   let providers = [];
@@ -3383,11 +3562,12 @@ router5.get("/health-dashboard", async (req, res) => {
 </html>`;
   res.send(html);
 });
-router5.use("/", app_routes_default);
-router5.use("/generate", generate_routes_default);
-router5.use("/admin", admin_routes_default);
-router5.use("/auth", auth_routes_default);
-var routes_default = router5;
+router6.use("/", app_routes_default);
+router6.use("/generate", generate_routes_default);
+router6.use("/admin", admin_routes_default);
+router6.use("/auth", auth_routes_default);
+router6.use("/feedback", feedback_routes_default);
+var routes_default = router6;
 
 // server/src/app.ts
 var app = express();
@@ -3406,6 +3586,12 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(requestIdMiddleware);
 app.use(requestLoggerMiddleware);
+app.use((_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  next();
+});
 app.use(env.API_PREFIX, routes_default);
 app.use(notFoundHandler);
 app.use(globalErrorHandler);

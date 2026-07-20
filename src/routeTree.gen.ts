@@ -31,6 +31,7 @@ import { Route as AdminRotationRouteImport } from './routes/admin.rotation'
 import { Route as AdminPromptEngineRouteImport } from './routes/admin.prompt-engine'
 import { Route as AdminMonitoringRouteImport } from './routes/admin.monitoring'
 import { Route as AdminLogsRouteImport } from './routes/admin.logs'
+import { Route as AdminFeedbacksRouteImport } from './routes/admin.feedbacks'
 import { Route as AdminApiKeyRouteImport } from './routes/admin.api-key'
 import { Route as AdminAiProviderRouteImport } from './routes/admin.ai-provider'
 
@@ -144,6 +145,11 @@ const AdminLogsRoute = AdminLogsRouteImport.update({
   path: '/logs',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminFeedbacksRoute = AdminFeedbacksRouteImport.update({
+  id: '/feedbacks',
+  path: '/feedbacks',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminApiKeyRoute = AdminApiKeyRouteImport.update({
   id: '/api-key',
   path: '/api-key',
@@ -163,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/admin/ai-provider': typeof AdminAiProviderRoute
   '/admin/api-key': typeof AdminApiKeyRoute
+  '/admin/feedbacks': typeof AdminFeedbacksRoute
   '/admin/logs': typeof AdminLogsRoute
   '/admin/monitoring': typeof AdminMonitoringRoute
   '/admin/prompt-engine': typeof AdminPromptEngineRoute
@@ -187,6 +194,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/admin/ai-provider': typeof AdminAiProviderRoute
   '/admin/api-key': typeof AdminApiKeyRoute
+  '/admin/feedbacks': typeof AdminFeedbacksRoute
   '/admin/logs': typeof AdminLogsRoute
   '/admin/monitoring': typeof AdminMonitoringRoute
   '/admin/prompt-engine': typeof AdminPromptEngineRoute
@@ -214,6 +222,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/admin/ai-provider': typeof AdminAiProviderRoute
   '/admin/api-key': typeof AdminApiKeyRoute
+  '/admin/feedbacks': typeof AdminFeedbacksRoute
   '/admin/logs': typeof AdminLogsRoute
   '/admin/monitoring': typeof AdminMonitoringRoute
   '/admin/prompt-engine': typeof AdminPromptEngineRoute
@@ -242,6 +251,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin/ai-provider'
     | '/admin/api-key'
+    | '/admin/feedbacks'
     | '/admin/logs'
     | '/admin/monitoring'
     | '/admin/prompt-engine'
@@ -266,6 +276,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin/ai-provider'
     | '/admin/api-key'
+    | '/admin/feedbacks'
     | '/admin/logs'
     | '/admin/monitoring'
     | '/admin/prompt-engine'
@@ -292,6 +303,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin/ai-provider'
     | '/admin/api-key'
+    | '/admin/feedbacks'
     | '/admin/logs'
     | '/admin/monitoring'
     | '/admin/prompt-engine'
@@ -475,6 +487,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLogsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/feedbacks': {
+      id: '/admin/feedbacks'
+      path: '/feedbacks'
+      fullPath: '/admin/feedbacks'
+      preLoaderRoute: typeof AdminFeedbacksRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/api-key': {
       id: '/admin/api-key'
       path: '/api-key'
@@ -495,6 +514,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminAiProviderRoute: typeof AdminAiProviderRoute
   AdminApiKeyRoute: typeof AdminApiKeyRoute
+  AdminFeedbacksRoute: typeof AdminFeedbacksRoute
   AdminLogsRoute: typeof AdminLogsRoute
   AdminMonitoringRoute: typeof AdminMonitoringRoute
   AdminPromptEngineRoute: typeof AdminPromptEngineRoute
@@ -509,6 +529,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAiProviderRoute: AdminAiProviderRoute,
   AdminApiKeyRoute: AdminApiKeyRoute,
+  AdminFeedbacksRoute: AdminFeedbacksRoute,
   AdminLogsRoute: AdminLogsRoute,
   AdminMonitoringRoute: AdminMonitoringRoute,
   AdminPromptEngineRoute: AdminPromptEngineRoute,

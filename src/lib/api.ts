@@ -56,7 +56,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const result: ApiResponse<T> = await response.json();
 
   if (!response.ok || !result.success) {
-    throw new Error(result.message || result.error?.code || 'Request failed');
+    const errorCode = result.error?.code || result.message;
+    if (errorCode === 'PROMPT_LIMIT_EXCEEDED' || response.status === 403) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('wf:prompt-limit-exceeded'));
+      }
+    }
+    throw new Error(result.message || errorCode || 'Request failed');
   }
 
   // 3. Save to cache on successful GET requests
@@ -77,7 +83,13 @@ export const api = {
   auth: {
     login: (body: any) => request<any>('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
     register: (body: any) => request<any>('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
+    me: () => request<any>('/auth/me'),
     refresh: (body: any) => request<any>('/auth/refresh', { method: 'POST', body: JSON.stringify(body) }),
+  },
+
+  feedback: {
+    create: (body: { type: 'bug' | 'feature'; content: string }) =>
+      request<any>('/feedback', { method: 'POST', body: JSON.stringify(body) }),
   },
 
   projects: {
@@ -139,6 +151,10 @@ export const api = {
       update: (id: string, body: any) => request<any>(`/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
       delete: (id: string) => request<any>(`/admin/users/${id}`, { method: 'DELETE' }),
     },
+    feedbacks: {
+      list: () => request<any[]>('/admin/feedbacks'),
+      delete: (id: string) => request<any>(`/admin/feedbacks/${id}`, { method: 'DELETE' }),
+    },
     apiKeys: {
       list: (providerId?: string) => request<any[]>(`/admin/api-keys${providerId ? `?providerId=${providerId}` : ''}`),
       create: (body: any) => request<any>('/admin/api-keys', { method: 'POST', body: JSON.stringify(body) }),
@@ -171,6 +187,8 @@ export const api = {
       getByType: (type: string) => request<any[]>(`/admin/prompt-templates/${type}`),
       update: (id: string, body: any) => request<any>(`/admin/prompt-templates/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
       publish: (id: string) => request<any>(`/admin/prompt-templates/${id}/publish`, { method: 'POST' }),
+      optimize: (body: { promptText: string; instructions?: string; generateType: string; role: 'system' | 'user' }) =>
+        request<{ optimizedText: string }>('/admin/prompt-templates/optimize', { method: 'POST', body: JSON.stringify(body) }),
     },
     monitoring: {
       realtime: () => request<any>('/admin/monitoring/realtime'),

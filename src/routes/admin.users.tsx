@@ -28,6 +28,7 @@ interface User {
   name: string;
   role: "admin" | "user";
   isActive: boolean;
+  promptTokens: number;
   createdAt: string;
 }
 
@@ -42,6 +43,7 @@ function UsersPage() {
   const [formRole, setFormRole] = useState<"admin" | "user">("user");
   const [formPassword, setFormPassword] = useState("");
   const [formActive, setFormActive] = useState(true);
+  const [formPromptTokens, setFormPromptTokens] = useState(5);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -67,6 +69,7 @@ function UsersPage() {
     setFormRole("user");
     setFormPassword("");
     setFormActive(true);
+    setFormPromptTokens(5);
     setDialogOpen(true);
   }
 
@@ -77,6 +80,7 @@ function UsersPage() {
     setFormRole(u.role);
     setFormPassword("");
     setFormActive(u.isActive);
+    setFormPromptTokens(u.promptTokens ?? 5);
     setDialogOpen(true);
   }
 
@@ -99,6 +103,7 @@ function UsersPage() {
         role: formRole,
         password: formPassword.trim() || undefined,
         isActive: formActive,
+        promptTokens: formPromptTokens,
       };
 
       if (editingUser) {
@@ -162,6 +167,7 @@ function UsersPage() {
                   <TableHead>Nama</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Token Prompt</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Dibuat Pada</TableHead>
                   <TableHead className="text-right">Action</TableHead>
@@ -177,6 +183,7 @@ function UsersPage() {
                         {u.role}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-white font-medium">{u.promptTokens ?? 0}</TableCell>
                     <TableCell>
                       <button onClick={() => handleToggleActive(u)} className="cursor-pointer">
                         <Badge variant={u.isActive ? "default" : "outline"} className="text-[10px]">
@@ -235,15 +242,28 @@ function UsersPage() {
                   <Input id="password" type="password" value={formPassword} onChange={e => setFormPassword(e.target.value)} placeholder={editingUser ? "Kosongkan jika tidak diubah" : "Masukkan password"} />
                 </div>
               </div>
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="active"
-                  checked={formActive}
-                  onChange={e => setFormActive(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                />
-                <Label htmlFor="active" className="cursor-pointer">Aktifkan akun pengguna</Label>
+               <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="promptTokens">Token Prompt</Label>
+                  <Input
+                    id="promptTokens"
+                    type="number"
+                    min={0}
+                    value={formPromptTokens}
+                    onChange={e => setFormPromptTokens(parseInt(e.target.value, 10) || 0)}
+                    placeholder="Contoh: 5"
+                  />
+                </div>
+                <div className="flex items-center gap-2 pt-6">
+                  <input
+                    type="checkbox"
+                    id="active"
+                    checked={formActive}
+                    onChange={e => setFormActive(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <Label htmlFor="active" className="cursor-pointer">Aktifkan akun</Label>
+                </div>
               </div>
             </div>
             <DialogFooter>

@@ -14,3 +14,4 @@ export * from './project-templates.schema';
 export * from './request-logs.schema';
 export * from './activity-logs.schema';
 export * from './app-settings.schema';
+export * from './feedbacks.schema';

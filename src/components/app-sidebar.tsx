@@ -66,7 +66,7 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [q, setQ] = useState("");
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; email: string; promptTokens?: number } | null>(null);
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeProjectId] = useState(() =>
@@ -74,7 +74,20 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
   );
 
   useEffect(() => {
-    setUser(getUser());
+    setUser(getUser() as any);
+
+    async function loadProfile() {
+      try {
+        const profile = await api.auth.me();
+        if (profile) {
+          setUser(profile);
+          localStorage.setItem("wf.auth", JSON.stringify(profile));
+        }
+      } catch (err) {
+        console.error("Failed to load profile:", err);
+      }
+    }
+    loadProfile();
   }, []);
 
   const fetchProjects = useCallback(async () => {
@@ -279,6 +292,12 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium">{user?.name ?? "Pengguna"}</div>
             <div className="truncate text-xs text-muted-foreground">{user?.email ?? "-"}</div>
+            {user?.promptTokens !== undefined && (
+              <div className="flex items-center gap-1 mt-1 text-[11px] font-medium text-emerald-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                <span>{user.promptTokens} Token Prompt</span>
+              </div>
+            )}
           </div>
           <button
             aria-label="Keluar"

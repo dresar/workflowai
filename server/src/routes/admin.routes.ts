@@ -8,6 +8,7 @@ import * as logsController from '../modules/admin/logs/logs.controller';
 import * as settingsController from '../modules/admin/settings/settings.controller';
 import * as technologyController from '../modules/technology/technology.controller';
 import * as usersController from '../modules/admin/users/users.controller';
+import * as feedbacksController from '../modules/admin/feedbacks/feedbacks.controller';
 
 const router = Router();
 router.use(adminAuthMiddleware);
@@ -20,6 +21,9 @@ router.get('/users', usersController.listUsers);
 router.post('/users', usersController.createUser);
 router.put('/users/:id', usersController.updateUser);
 router.delete('/users/:id', usersController.deleteUser);
+
+router.get('/feedbacks', feedbacksController.listFeedbacks);
+router.delete('/feedbacks/:id', feedbacksController.deleteFeedback);
 
 router.get('/providers', providerController.listProviders);
 router.post('/providers', providerController.createProvider);
@@ -42,6 +46,7 @@ router.delete('/technologies/:id', technologyController.deleteTechnology);
 router.patch('/technologies/:id/toggle', technologyController.toggleTechnology);
 
 router.get('/prompt-templates', promptTemplateController.listPromptTemplates);
+router.post('/prompt-templates/optimize', promptTemplateController.optimizePrompt);
 router.get('/prompt-templates/:type', promptTemplateController.getPromptTemplateByType);
 router.put('/prompt-templates/:id', promptTemplateController.updatePromptTemplate);
 router.post('/prompt-templates/:id/publish', promptTemplateController.publishPromptTemplate);

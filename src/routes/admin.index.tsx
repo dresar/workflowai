@@ -60,36 +60,37 @@ function DashboardPage() {
           setStats(statsRes);
         }
 
-        // Fallback mockup chart to maintain premium visual aesthetic when request logs are empty
+        // Build a continuous timeline of the last 14 days
+        const last14Days = Array.from({ length: 14 }).map((_, i) => {
+          const d = new Date();
+          d.setDate(d.getDate() - (13 - i));
+          return d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+        });
+
+        const map: Record<string, Record<string, number>> = {};
+        last14Days.forEach((dayStr) => {
+          map[dayStr] = { gemini: 0, groq: 0, claude: 0 };
+        });
+
         if (usageRes && usageRes.length > 0) {
-          // Format raw group rows to recharts schema
-          const map: Record<string, Record<string, number>> = {};
           usageRes.forEach((row: any) => {
             const dateStr = new Date(row.date).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-            if (!map[dateStr]) map[dateStr] = { gemini: 0, groq: 0, claude: 0 };
-            const providerKey = String(row.provider || "").toLowerCase();
-            if (providerKey.includes("gemini")) map[dateStr].gemini += row.count;
-            else if (providerKey.includes("groq")) map[dateStr].groq += row.count;
-            else map[dateStr].claude += row.count;
+            if (map[dateStr]) {
+              const providerKey = String(row.provider || "").toLowerCase();
+              if (providerKey.includes("gemini")) map[dateStr].gemini += Number(row.count || 0);
+              else if (providerKey.includes("groq")) map[dateStr].groq += Number(row.count || 0);
+              else map[dateStr].claude += Number(row.count || 0);
+            }
           });
-
-          const formatted = Object.entries(map).map(([day, val]) => ({
-            day,
-            gemini: val.gemini,
-            groq: val.groq,
-            claude: val.claude,
-          }));
-          setChartData(formatted);
-        } else {
-          // Beautiful default curve fallback
-          const dummy = Array.from({ length: 14 }).map((_, i) => ({
-            day: String(i + 1),
-            gemini: Math.round(10 + Math.random() * 20),
-            groq: Math.round(5 + Math.random() * 15),
-            claude: Math.round(2 + Math.random() * 10),
-          }));
-          setChartData(dummy);
         }
+
+        const formatted = Object.entries(map).map(([day, val]) => ({
+          day,
+          gemini: val.gemini,
+          groq: val.groq,
+          claude: val.claude,
+        }));
+        setChartData(formatted);
       } catch {
         toast.error("Gagal memuat statistik dashboard");
       } finally {

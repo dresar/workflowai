@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import * as generateController from '../modules/generate/generate.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
+import { checkPromptTokens } from '../middleware/prompt-tokens.middleware';
 
 const router = Router();
 router.use(authMiddleware);
+router.use(checkPromptTokens);
 
 router.post('/canvas/:projectId', generateController.generateCanvas);
 router.post('/prd/:projectId', generateController.generatePRD);

@@ -28,6 +28,14 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(requestIdMiddleware);
 app.use(requestLoggerMiddleware);
 
+// Disable caching for all API endpoints to guarantee realtime database data
+app.use((_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 app.use(env.API_PREFIX, router);
 
 app.use(notFoundHandler);

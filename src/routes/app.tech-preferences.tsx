@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sparkles, Wrench, ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,6 +60,39 @@ function TechPref() {
   const [choice, setChoice] = useState<"auto" | "manual" | null>(null);
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [dbDropdowns, setDbDropdowns] = useState<Array<{ key: string; label: string; opts: string[] }>>([]);
+
+  useEffect(() => {
+    async function loadTechs() {
+      try {
+        const list = await api.technologies.list();
+        const grouped: Record<string, { label: string; opts: string[] }> = {};
+        
+        list.forEach((t: any) => {
+          if (!t.isActive) return;
+          const key = t.category.toLowerCase().replace(/\s+/g, "");
+          if (!grouped[key]) {
+            grouped[key] = { label: t.category, opts: [] };
+          }
+          if (!grouped[key].opts.includes(t.name)) {
+            grouped[key].opts.push(t.name);
+          }
+        });
+
+        const result = Object.entries(grouped).map(([key, val]) => ({
+          key,
+          label: val.label,
+          opts: val.opts.sort(),
+        }));
+
+        setDbDropdowns(result.length > 0 ? result : DROPDOWNS);
+      } catch (err) {
+        console.error("Gagal memuat daftar teknologi dinamis:", err);
+        setDbDropdowns(DROPDOWNS);
+      }
+    }
+    loadTechs();
+  }, []);
 
   async function handleNext() {
     if (!choice) return;
@@ -70,11 +103,14 @@ function TechPref() {
     try {
       await api.projects.update(projectId, { techSelectionMode: choice });
       if (choice === "manual") {
-        const technologies = Object.entries(selections).map(([category, technologyName]) => ({
-          category,
-          technologyName,
-          isAiSelected: false,
-        }));
+        const technologies = Object.entries(selections).map(([categoryKey, technologyName]) => {
+          const matchedDropdown = dbDropdowns.find(d => d.key === categoryKey);
+          return {
+            category: matchedDropdown ? matchedDropdown.label : categoryKey,
+            technologyName,
+            isAiSelected: false,
+          };
+        });
         if (technologies.length > 0) {
           await api.projects.saveTechnologies(projectId, { technologies });
         }
@@ -135,7 +171,7 @@ function TechPref() {
       {choice === "manual" && (
         <div className="mt-8 card-premium p-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {DROPDOWNS.map((d) => (
+            {dbDropdowns.map((d) => (
               <div key={d.key} className="space-y-1.5">
                 <Label>{d.label}</Label>
                 <Select

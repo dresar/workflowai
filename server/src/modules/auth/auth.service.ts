@@ -94,4 +94,16 @@ export class AuthService {
       throw new UnauthorizedError('Invalid or expired refresh token');
     }
   }
+
+  async getProfile(id: string) {
+    const user = await this.repo.findById(id);
+    if (!user) throw new UnauthorizedError('User not found');
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      promptTokens: user.promptTokens,
+    };
+  }
 }

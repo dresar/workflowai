@@ -73,7 +73,7 @@ function TechnologyPage() {
   async function loadTechs() {
     setLoading(true);
     try {
-      const res = await api.admin.technologies.list();
+      const res = await api.admin.technologies.list({ limit: 500 });
       setTechs(res || []);
     } catch (err) {
       toast.error("Gagal memuat data teknologi");

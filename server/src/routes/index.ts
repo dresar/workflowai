@@ -6,6 +6,7 @@ import appRoutes from './app.routes';
 import generateRoutes from './generate.routes';
 import adminRoutes from './admin.routes';
 import authRoutes from './auth.routes';
+import feedbackRoutes from './feedback.routes';
 
 const router = Router();
 
@@ -155,5 +156,6 @@ router.use('/', appRoutes);
 router.use('/generate', generateRoutes);
 router.use('/admin', adminRoutes);
 router.use('/auth', authRoutes);
+router.use('/feedback', feedbackRoutes);
 
 export default router;

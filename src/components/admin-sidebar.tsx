@@ -44,6 +44,7 @@ const NAV: Array<{ to: string; label: string; icon: LucideIcon }> = [
   { to: "/admin/monitoring", label: "Monitoring", icon: Activity },
   { to: "/admin/logs", label: "Log Aktivitas", icon: ScrollText },
   { to: "/admin/users", label: "Kelola User", icon: Users },
+  { to: "/admin/feedbacks", label: "Feedback & Bug", icon: MessageCircleQuestion },
   { to: "/admin/settings", label: "Pengaturan", icon: Settings },
 ];
 
