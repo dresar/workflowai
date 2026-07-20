@@ -169,7 +169,10 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
             Riwayat Project
           </span>
           <button
-            onClick={fetchProjects}
+            onClick={() => {
+              api.clearCache();
+              fetchProjects();
+            }}
             className="text-muted-foreground hover:text-foreground transition"
             title="Refresh riwayat"
           >

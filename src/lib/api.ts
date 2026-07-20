@@ -14,7 +14,28 @@ const BASE_API_URL =
   (typeof window !== 'undefined' && (window as any).VITE_BASE_API_URL) ||
   (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? '/api/v1' : 'http://localhost:3000/api/v1');
 
+const cache = new Map<string, { data: any; expiry: number }>();
+const CACHE_TTL = 10000; // 10 seconds cache for instant transitions
+
+export const clearApiCache = () => {
+  cache.clear();
+};
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const method = (options.method || 'GET').toUpperCase();
+  const cacheKey = `${method}:${path}`;
+
+  // 1. Check cache if method is GET
+  if (method === 'GET') {
+    const cached = cache.get(cacheKey);
+    if (cached && Date.now() < cached.expiry) {
+      return cached.data as T;
+    }
+  } else {
+    // 2. If mutating data (POST, PUT, DELETE, PATCH), clear cache to get fresh subsequent reads
+    clearApiCache();
+  }
+
   const url = `${BASE_API_URL}${path}`;
   const headers = {
     'Content-Type': 'application/json',
@@ -36,10 +57,19 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error(result.message || result.error?.code || 'Request failed');
   }
 
+  // 3. Save to cache on successful GET requests
+  if (method === 'GET') {
+    cache.set(cacheKey, {
+      data: result.data,
+      expiry: Date.now() + CACHE_TTL,
+    });
+  }
+
   return result.data as T;
 }
 
 export const api = {
+  clearCache: clearApiCache,
   health: () => request<any>('/health'),
 
   auth: {
