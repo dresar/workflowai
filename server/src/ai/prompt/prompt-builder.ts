@@ -71,7 +71,23 @@ export class PromptBuilder {
       database: `You are a Senior Database Architect. Generate a complete Database Design document in ${language}. Include all tables, columns, relationships, and indexes in Markdown.`,
       api: `You are a Senior Backend Engineer. Generate a comprehensive REST API Design document in ${language}. Include all endpoints, request/response schemas, and authentication in Markdown.`,
       tasks: `You are a Senior AI Developer and Architect. Generate a detailed Task Breakdown in ${language} tailored SPECIFICALLY for AI coding agents (like Cursor, Trae, Windsurf, or Antigravity) to execute via 'vibe coding'. DO NOT include human project management metrics like hour estimations, story points, or timelines. DO provide exact actionable technical steps (e.g., 'Create file X', 'Run command Y', 'Implement function Z') organized by development phases and dependencies in Markdown.`,
-      prompt: `You are an expert AI Prompt Engineer and Senior Web Developer. Generate a highly detailed development prompt for ${aiTarget} to build this application. The prompt must be extremely comprehensive (up to 50,000 characters). DO NOT use markdown hash headings (#) or bold/italic markers (*, **, ***, _, __). Use UPPERCASE plain text and '===' dividers. The prompt must be structured with these exact sections:\n1. "=== UI/UX & FRONTEND SPECIFICATIONS ===\n- You are a senior frontend developer. Build the UI/UX layout. Specify pages list, color palettes with hex values/classes, consistent button styling, and layout details.\"\n2. \"=== BACKEND SPECIFICATIONS & SYSTEM FLOW ===\n- You are a senior backend developer. Build the server-side API. Detail endpoints, controllers, logical flows, and ERD relations.\"\n3. \"=== DATABASE SQL SCHEMAS ===\n- Pure CREATE TABLE statements.\"\n4. \"=== AI AGENT PROMPTS & DEVELOPMENT TASKS ===\n- Detailed tasks directing AI agents like Antigravity, Cursor, or Trae on exactly what steps to do first.\". Output in English.`,
+      prompt: `Hasilkan struktur file prompt modular untuk menginisialisasi KESELURUHAN AI workspace (untuk semua folder utama) berdasarkan blueprint dan PRD proyek ini.
+
+PENTING:
+1. Anda BEBAS menentukan berapa jumlah folder dan file yang dibutuhkan untuk membangun proyek ini (sesuaikan dengan kompleksitas fitur).
+2. Setiap folder harus memiliki instruksi spesifik untuk modul tersebut.
+3. JANGAN PERNAH membuat file bernama "README.md".
+4. Setiap nama folder dan file HARUS diawali dengan angka urutan (contoh: 01_Project_Setup, 02_Database, dll. Dan untuk file: 01_instruksi.md, 02_schema.sql, dll).
+5. WAJIB BUAT FILE TERAKHIR PER FOLDER: File paling akhir di setiap folder HARUS bernama "99_ringkasan.md".
+6. Output Anda HARUS HANYA berupa JSON object murni tanpa pembungkus blok kode Markdown (\`\`\`json). Key adalah path file lengkap dengan foldernya, dan value adalah isi konten teks/Markdown-nya.
+
+Format JSON yang Diharapkan:
+{
+  "01_Project_Setup/01_setup_utama.md": "# Project Setup\\n...",
+  "01_Project_Setup/99_ringkasan.md": "Ringkasan setup...",
+  "02_Database/01_skema.md": "# Database\\n...",
+  "02_Database/99_ringkasan.md": "Ringkasan database..."
+}`,
       canvas: `You are a Senior Software Architect and Full-Stack System Designer. Generate a COMPREHENSIVE and COMPLEX feature canvas structure for this project. You MUST generate between 12 and 15 feature objects. Each feature MUST have detailed sub-features, complete SQL schemas, and actionable AI agent tasks. Output ONLY a valid JSON array with no explanations and no markdown code blocks. The JSON must be directly parseable by JSON.parse().`,
       workflow: `You are a Senior Software Architect. Generate a complete development workflow overview in ${language}. Markdown format.`,
     };

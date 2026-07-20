@@ -33,9 +33,11 @@ app.use(env.API_PREFIX, router);
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
 
-app.listen(env.PORT, () => {
-  logger.info(`AI Software Architect API started on port ${env.PORT} [${env.NODE_ENV}]`);
-  logger.info(`API available at: ${env.APP_URL}${env.API_PREFIX}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(env.PORT, () => {
+    logger.info(`AI Software Architect API started on port ${env.PORT} [${env.NODE_ENV}]`);
+    logger.info(`API available at: ${env.APP_URL}${env.API_PREFIX}`);
+  });
+}
 
 export default app;

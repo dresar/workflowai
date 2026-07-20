@@ -10,7 +10,9 @@ export interface ApiResponse<T = any> {
   };
 }
 
-const BASE_API_URL = (typeof window !== 'undefined' && (window as any).VITE_BASE_API_URL) || 'http://localhost:3000/api/v1';
+const BASE_API_URL =
+  (typeof window !== 'undefined' && (window as any).VITE_BASE_API_URL) ||
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? '/api/v1' : 'http://localhost:3000/api/v1');
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${BASE_API_URL}${path}`;

@@ -839,24 +839,58 @@ function PromptPage() {
         try {
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed === 'object') {
-            const updated = folders.map(folder => ({
-              ...folder,
-              files: folder.files.map(file => {
-                let matchedContent = file.content;
-                Object.entries(parsed).forEach(([key, val]) => {
-                  if (file.id.includes(key) || file.name.toLowerCase().includes(key.toLowerCase())) {
-                    matchedContent = val as string;
-                  }
-                });
-                return { ...file, content: matchedContent };
-              })
-            }));
-            setFolders(updated);
-            await savePromptsToDb(updated);
-            toast.success("Semua prompt berhasil digenerate oleh AI!", { id: genToast });
-          } else {
-            toast.error("Format JSON AI tidak valid", { id: genToast });
+            // Unpack content string if the response uses nested stringified JSON
+            let actualParsed = parsed;
+            if (parsed.content && typeof parsed.content === 'string') {
+              try {
+                actualParsed = JSON.parse(parsed.content);
+              } catch {}
+            }
+
+            const draftFolders: PromptFolder[] = [];
+            Object.entries(actualParsed).forEach(([key, val]) => {
+              if (key === 'documentType' || key === 'collaborative' || key === 'content') return;
+
+              const fileContent = val as string;
+              let folderName = '01_Project_Setup';
+              let fileName = key;
+
+              if (key.includes('/')) {
+                const parts = key.split('/');
+                folderName = parts[0].trim();
+                fileName = parts.slice(1).join('/').trim();
+              }
+
+              let targetFolder = draftFolders.find(
+                f => f.name.toLowerCase() === folderName.toLowerCase() || f.id === folderName
+              );
+              if (!targetFolder) {
+                targetFolder = {
+                  id: `folder_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+                  name: folderName,
+                  description: `Generated folder for ${folderName}`,
+                  files: []
+                };
+                draftFolders.push(targetFolder);
+              }
+
+              targetFolder.files.push({
+                id: `file_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+                name: fileName,
+                description: `Generated file for ${fileName}`,
+                content: fileContent
+              });
+            });
+
+            if (draftFolders.length > 0) {
+              setFolders(draftFolders);
+              await savePromptsToDb(draftFolders);
+              toast.success("Semua prompt berhasil digenerate oleh AI!", { id: genToast });
+              return; // Sukses, selesai
+            }
           }
+          // Jika kosong atau format salah
+          throw new Error("Invalid structure");
         } catch {
           toast.error("Gagal memproses JSON respons AI", { id: genToast });
         }
@@ -1275,6 +1309,8 @@ ${techStack.length > 0 ? techStack.map(t => `- **${t}**`).join('\n') : `- React 
             projectId={projectId || ""}
             documentType="prompt"
             onSaveSuccess={handleImportClaudeJson}
+            foldersTree={folders.map((f: any) => ({ name: f.name, files: f.files.map((file: any) => file.name) }))}
+            summaryFiles={folders.flatMap((f: any) => f.files.filter((file: any) => file.name.toLowerCase().includes("ringkasan")).map((file: any) => ({ folderName: f.name, content: file.content })))}
           />
 
           <Button onClick={downloadZIP} disabled={downloadingZip} size="sm" className="text-[11px] h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white">
@@ -1435,6 +1471,9 @@ ${techStack.length > 0 ? techStack.map(t => `- **${t}**`).join('\n') : `- React 
                     projectId={projectId || ""}
                     documentType="prompt"
                     onSaveSuccess={handleImportClaudeJson}
+                    folderName={activeFolder.name}
+                    foldersTree={folders.map((f: any) => ({ name: f.name, files: f.files.map((file: any) => file.name) }))}
+                    summaryFiles={folders.flatMap((f: any) => f.files.filter((file: any) => file.name.toLowerCase().includes("ringkasan")).map((file: any) => ({ folderName: f.name, content: file.content })))}
                   />
                 </div>
               </div>

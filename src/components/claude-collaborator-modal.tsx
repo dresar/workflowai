@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Copy, ExternalLink, Loader2, Check, HelpCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Copy, ExternalLink, Loader2, Check, HelpCircle, Expand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -18,6 +18,9 @@ interface ClaudeCollaboratorModalProps {
   documentType: "prd" | "tasks" | "prompt";
   onSaveSuccess: (content: string) => void;
   triggerButton?: React.ReactNode;
+  folderName?: string;
+  foldersTree?: { name: string, files: string[] }[];
+  summaryFiles?: { folderName: string, content: string }[];
 }
 
 export function ClaudeCollaboratorModal({
@@ -25,11 +28,17 @@ export function ClaudeCollaboratorModal({
   documentType,
   onSaveSuccess,
   triggerButton,
+  folderName,
+  foldersTree,
+  summaryFiles,
 }: ClaudeCollaboratorModalProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const [copied, setCopied] = useState(false);
   const [manualContent, setManualContent] = useState("");
+  const [previewPrompt, setPreviewPrompt] = useState("");
+  const [showFullPreview, setShowFullPreview] = useState(false);
 
   const docNames = {
     prd: "Product Requirement Document (PRD)",
@@ -37,8 +46,20 @@ export function ClaudeCollaboratorModal({
     prompt: "Super Prompt untuk AI Coding",
   };
 
-  async function handleCopyPrompt() {
-    setLoading(true);
+  useEffect(() => {
+    if (open) {
+      generatePromptPreview();
+    } else {
+      setPreviewPrompt("");
+      setManualContent("");
+      setCopied(false);
+      setShowFullPreview(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, documentType, projectId]);
+
+  async function generatePromptPreview() {
+    setLoadingPreview(true);
     try {
       // Gather all project context
       const [project, techs, answers, canvas, docsResult, templates] = await Promise.all([
@@ -50,7 +71,7 @@ export function ClaudeCollaboratorModal({
         api.admin.promptTemplates.getByType(documentType).catch(() => []),
       ]);
 
-      // Normalisasi format canvasFeatures agar kompatibel dengan data array maupun object blueprint
+      // Normalisasi format canvasFeatures
       let canvasFeaturesFormatted = "";
       if (canvas && canvas.features) {
         if (Array.isArray(canvas.features)) {
@@ -72,7 +93,11 @@ export function ClaudeCollaboratorModal({
       const docs: Record<string, string> = {};
       if (Array.isArray(docsResult)) {
         docsResult.forEach((d: any) => {
-          docs[d.type] = d.content;
+          // Jangan sertakan dokumen yang tipenya sama dengan yang sedang di-generate
+          // untuk mencegah ukuran prompt menjadi raksasa (misal: JSON prompt lama ikut masuk)
+          if (d.type !== documentType) {
+            docs[d.type] = d.content;
+          }
         });
       }
 
@@ -81,217 +106,168 @@ export function ClaudeCollaboratorModal({
       if (Array.isArray(templates) && templates.length > 0) {
         const activeTemplate = templates.find((t: any) => t.isPublished) || templates[0];
         if (activeTemplate) {
-          templateInstructions = `\n--- TEMPLATE RULES & SYSTEM PROMPT ---\nSystem Instruction: ${activeTemplate.systemPrompt || ""}\n${activeTemplate.developerPrompt ? `Developer Guidelines: ${activeTemplate.developerPrompt}` : ""}\n`;
+          templateInstructions = `\n<template_rules>\nSystem Instruction: ${activeTemplate.systemPrompt || ""}\n${activeTemplate.developerPrompt ? `Developer Guidelines: ${activeTemplate.developerPrompt}` : ""}\n</template_rules>\n`;
         }
       }
 
-      // Build context and instruction
-      let promptText = `You are a Senior AI Developer and Technical Collaborator.
-We need to generate a ${documentType.toUpperCase()} document for our project.
+      // Build context and instruction using professional Claude prompting structure (XML tags)
+      let promptText = `Anda adalah seorang Principal Software Architect dan AI Coding Assistant tingkat lanjut.
+Tugas Anda adalah menghasilkan dokumen ${documentType.toUpperCase()} yang sangat terperinci dan profesional untuk proyek perangkat lunak baru.
 
-PROJECT DETAILS:
-- Name: ${project.name}
-- Idea: ${project.idea}
-- Language: ${project.language === "id" ? "Indonesian" : "English"}
-${project.description ? `- Description: ${project.description}` : ""}
+<project_context>
+Nama Proyek: ${project.name}
+Ide Utama: ${project.idea}
+Bahasa Output: ${project.language === "id" ? "Bahasa Indonesia" : "English"}
+${project.description ? `Deskripsi Tambahan: ${project.description}` : ""}
+</project_context>
 
-TECHNOLOGY STACK:
+<tech_stack>
 ${techs.map((t: any) => `- ${t.category}: ${t.technologyName}`).join("\n")}
+</tech_stack>
 
-INTERVIEW ANSWERS:
-${answers.map((a: any) => `Q: ${a.question ?? a.questionId}\nA: ${JSON.stringify(a.answer)}`).join("\n\n")}
+<interview_context>
+${answers.map((a: any) => `T: ${a.question ?? a.questionId}\nJ: ${JSON.stringify(a.answer)}`).join("\n\n")}
+</interview_context>
 
-FEATURE CANVAS / SPECIFICATIONS:
+<features_and_specifications>
 ${canvasFeaturesFormatted}
+</features_and_specifications>
 
-=== PANDUAN REKAYASA PROMPT LENGKAP & ANTI-NGAWUR (PENTING) ===
-Untuk memastikan Anda (Claude) menghasilkan dokumen Blueprint / Spesifikasi yang super presisi, bebas dari halusinasi, dan tidak menuliskan kode secara asal (lazy coding), Anda WAJIB mematuhi instruksi berikut:
-
-1. ATURAN PENYELARASAN DESAIN & BERPIKIR KRITIS (CRITICAL THINKING RULES):
-   - JANGAN PERNAH MENULIS PERINGATAN, CATATAN KEBERATAN, ATAU MENGELUH TENTANG KETIDAKSESUAIAN FITUR CANVAS DENGAN IDE PROYEK.
-   - Pikirkan dan analisis secara mendalam: Anda diberikan data Ide Proyek ("${project.name}"), Deskripsi Proyek ("${project.description || '-'}"), Jawaban Wawancara, serta Canvas Fitur yang terlampir. Hubungkan seluruh data tersebut secara cerdas.
-   - Jika terdapat perbedaan atau konflik antara Canvas Fitur dengan deskripsi ide proyek, gunakan keahlian arsitektur Anda untuk mengambil keputusan desain terbaik. Selaraskan komponen canvas agar relevan dan logis dengan tujuan utama proyek "${project.name}". Rancang skema database, endpoint API, dan alur halaman yang paling efisien, aman, dan berkinerja tinggi untuk jenis aplikasi ini tanpa ada bagian yang terpotong.
-
-2. DESAIN SISTEM YANG LENGKAP & JELAS (NO PLACEHOLDERS):
-   - JANGAN PERNAH menulis komentar seperti "// TODO: lengkapi nanti" atau "// kode logika Anda di sini...". AI Coding Agent butuh kode/logika yang utuh. Tulis seluruh kerangka logika, penanganan error, schema tipe data, dan alur logic secara eksplisit dan tuntas.
-   
-3. STRUKTUR ENDPOINT & MAPPING SCHEMA API:
-   - Setiap endpoint harus memiliki format JSON Request Body dan Response Body (Success & Error status) yang valid dan tertulis secara literal. Sertakan property types (e.g., string, uuid, boolean, array, integer) secara jelas.
-   - Cantumkan juga middleware apa yang memproteksi endpoint tersebut (contoh: AuthMiddleware, RequireRoleAdmin, dsb).
-
-4. DESAIN DATABASE POSTGRESQL RELASIONAL:
-   - Gunakan skema database DDL SQL murni PostgreSQL. Gunakan primary key berbasis UUID (contoh: id UUID PRIMARY KEY DEFAULT gen_random_uuid()), foreign key relasional yang memiliki kekangan ON DELETE CASCADE / SET NULL, kolom penanda waktu (created_at TIMESTAMPTZ DEFAULT NOW()), dan buatlah indeks (CREATE INDEX) pada kolom foreign key atau kolom filter.
-   - JANGAN campurkan sintaks PostgreSQL dengan database lain (seperti MySQL atau MongoDB).
-
-5. PERSYARATAN FRONTEND & UI/UX YANG UTUH:
-   - Jabarkan setiap halaman secara visual dan fungsional: sebutkan layout utamanya, visual state (loading skeleton, modal alert, form validation), interaksi mikro (hover transitions, active clicks), serta nama-nama component pembentuk halaman tersebut.
-
-6. VERIFIKASI PEMAKAIAN STACK TEKNOLOGI:
-   - Pastikan spesifikasi teknis diselaraskan dengan teknologi stack yang dipilih oleh pengguna di atas.
-
-
-EXISTING DOCUMENTS:
-${Object.entries(docs)
-  .map(([key, content]) => `--- EXISTING ${key.toUpperCase()} ---\n${String(content)}`)
-  .join("\n\n")}
+${Object.keys(docs).length > 0 ? `<existing_documents>\n${Object.entries(docs).map(([key, content]) => `[Dokumen ${key.toUpperCase()}]\n${String(content)}`).join("\n\n")}\n</existing_documents>` : ""}
 ${templateInstructions}
+
+<system_guidelines>
+Sebagai AI Architect profesional, pastikan Anda mematuhi standar ketat berikut:
+1. Berpikir Kritis & Mandiri: Selaraskan spesifikasi fitur dengan ide utama proyek. Rancang skema database, arsitektur endpoint API, dan alur interaksi frontend yang paling efisien, skalabel, dan aman.
+2. Bertindak Komprehensif (No Lazy Coding): JANGAN PERNAH menggunakan placeholder (seperti "// TODO: lengkapi nanti", "// implementasi tambahan di sini..."). Tulis seluruh kerangka logika, penanganan error, dan detail implementasi secara utuh dan eksplisit.
+3. Desain API & Endpoint: Setiap endpoint API harus memiliki format JSON Request Body dan Response Body (Success & Error status) yang tertulis secara literal beserta tipe datanya (string, integer, boolean, uuid). Cantumkan juga middleware yang melindungi setiap endpoint tersebut.
+4. Desain Database Relasional: Gunakan skema database DDL SQL murni PostgreSQL (kecuali instruksi menyebut sebaliknya). Wajib menggunakan primary key berbasis UUID, foreign key dengan ON DELETE CASCADE / SET NULL, tipe data waktu presisi (created_at TIMESTAMPTZ DEFAULT NOW()), serta sertakan indeks (CREATE INDEX) pada kolom yang sering difilter/foreign key.
+5. Persyaratan Frontend (UI/UX): Jabarkan komponen halaman secara mendetail (visual state seperti loading skeleton, form validation, state kosong) serta interaksi mikro yang meningkatkan kualitas user experience (UX).
+6. Presisi Format Output: Output respons AI Anda harus persis mematuhi instruksi spesifik di dalam bagian <task_instruction> di bawah ini.
+</system_guidelines>
 `;
 
       if (documentType === "prd") {
         promptText += `
-=== INSTRUKSI GENERATE PRODUCT REQUIREMENT DOCUMENT (PRD) ===
-Peran Anda: Lead Product Manager dan Principal Architect.
-Tugas Anda adalah menulis dokumen Product Requirement Document (PRD) yang sangat detail, profesional, dan komprehensif untuk proyek "${project.name}" (Ide: "${project.idea}").
+<task_instruction>
+Buatlah Product Requirement Document (PRD) yang komprehensif berdasarkan <project_context> dan <features_and_specifications>.
 
-STACK TEKNOLOGI YANG DIGUNAKAN:
-${techs.map((t: any) => `- ${t.category}: ${t.technologyName}`).join("\n")}
-
-INFORMASI CANVAS FITUR DAN SPESIFIKASI:
-${canvasFeaturesFormatted}
-
-ATURAN DAN ATURAN TEKNIS DOKUMEN:
-1. BAHASA: Tulis seluruh dokumen dalam ${project.language === "id" ? "Bahasa Indonesia yang baik, formal, dan profesional" : "English"}.
-2. FORMAT OUTPUT: Gunakan format Markdown standar.
-   - Gunakan heading H1 (#) hanya untuk judul utama.
-   - Gunakan heading H2 (##) untuk bab utama, dan H3 (###) untuk sub-bab.
-   - Untuk bullet point, gunakan karakter minus "- " (minus + spasi). JANGAN pernah menggunakan asterisk "*" sebagai bullet marker.
-   - Untuk teks tebal, gunakan "**teks**".
-   - JANGAN menulis tanda kurung atau simbol aneh yang merusak rendering markdown.
-3. KEDALAMAN KONTEN (PENTING! JANGAN ADA PLACEHOLDER):
-   - Dokumen ini harus sangat panjang (minimal 3500 - 5000 kata) dan mencakup seluruh aspek secara lengkap.
-   - Tulis secara eksplisit setiap kode SQL DDL, daftar file, struktur endpoint, dan komponen UI. Jangan tulis comment "// implementasi lainnya di sini...". AI pembuat code harus bisa membuat aplikasi ini langsung dari dokumen Anda tanpa bertanya lagi.
-
-STRUKTUR WAJIB DOKUMEN PRD:
+Struktur PRD yang Diharapkan (gunakan format Markdown):
 # Product Requirement Document (PRD) - ${project.name}
 
-## 1. Ringkasan Eksekutif (Executive Summary)
-- Latar belakang proyek, visi, tujuan bisnis, dan solusi yang ditawarkan.
+## 1. Executive Summary
+## 2. Problem Statement & Solution
+## 3. Goals & Metrics (KPI)
+## 4. User Personas & User Journey
+## 5. Functional Requirements
+(Detailkan tiap fitur: Deskripsi, User Stories, Acceptance Criteria, Data Flow, Prioritas)
+## 6. Technical Architecture & Database Data Model
+(Sertakan DDL SQL PostgreSQL dengan detail relasi dan indeks sesuai panduan)
+## 7. API Specifications
+(Sertakan struktur method, path, request/response schema, middleware secara rinci)
+## 8. Non-Functional Requirements
+## 9. Business Rules & Constraints
+## 10. Open Questions
 
-## 2. Deskripsi Masalah & Solusi (Problem Statement & Solution)
-- Detail masalah pengguna, target audiens, dan bagaimana sistem menyelesaikan masalah tersebut.
-
-## 3. Goals & Metrics (KPI Keberhasilan)
-- Indikator kesuksesan teknis dan bisnis secara kuantitatif.
-
-## 4. Analisis User Personas & User Journey
-- Profil user (contoh: Admin, Pengguna Biasa, Penjual) dan peta perjalanan pengguna (User Journey Map) dari awal registrasi hingga menggunakan fitur utama.
-
-## 5. Spesifikasi Fitur Detail (Functional Requirements)
-Untuk SETIAP fitur yang ada di Canvas Fitur/Spesifikasi di atas, buat sub-bagian detail seperti ini:
-### 5.x [Nama Fitur]
-- **Deskripsi:** Detail fungsionalitas fitur.
-- **User Stories:** Format "Sebagai [A], saya ingin [B] sehingga [C]".
-- **Acceptance Criteria:** Kriteria penerimaan teknis (minimal 4 poin detail).
-- **Alur Data & Logika:** Penjelasan langkah demi langkah bagaimana data diproses.
-- **Prioritas:** High/Medium/Low.
-
-## 6. Arsitektur Teknis & Struktur Database (Data Model)
-- **Desain Database:** Tulis kode SQL DDL lengkap menggunakan PostgreSQL untuk seluruh modul aplikasi. Gunakan tipe data UUID untuk primary key, foreign key dengan relasi ON DELETE CASCADE, tipe data TIMESTAMPTZ untuk tanggal, dan sertakan indeks (CREATE INDEX) untuk optimasi query.
-- **Struktur Folder Aplikasi:** Gambarkan tree struktur folder proyek (frontend dan backend).
-
-## 7. Desain API (API Specifications)
-- Tulis daftar lengkap endpoint API (Method, Path, Request Body JSON schema, Response JSON schema untuk sukses dan error, serta middleware auth yang dibutuhkan).
-
-## 8. Persyaratan Non-Fungsional (Non-Functional Requirements)
-- Keamanan (keamanan JWT token, password hashing, SQL injection prevention), Performansi (kecepatan respon < 200ms, caching), Skalabilitas, dan Ketersediaan.
-
-## 9. Aturan Bisnis & Batasan Sistem (Business Rules & Constraints)
-- Batasan input, aturan validasi form, hak akses (RBAC - Role-Based Access Control) detail untuk masing-masing user persona.
-
-## 10. Open Questions (Pertanyaan Terbuka)
-- Hal-hal yang memerlukan keputusan bisnis lebih lanjut.
-
-Output hanya dokumen PRD dalam format Markdown lengkap tanpa pembuka/penutup seperti "Ini dokumen PRD Anda:". Tulis langsung mulai dari judul "# Product Requirement Document (PRD)".`;
+Output harus langsung berupa format Markdown murni yang sangat panjang dan detail (bisa mencapai 3000-5000 kata), tanpa narasi pembuka/penutup.
+</task_instruction>`;
       } else if (documentType === "tasks") {
         promptText += `
-=== INSTRUKSI GENERATE VIBE CODING TASKS ===
-Peran Anda: Lead Engineering Manager.
-Tugas Anda adalah memecah rancangan proyek "${project.name}" (Ide: "${project.idea}") menjadi daftar Checklist Task yang sangat terstruktur, berurutan secara kronologis, dan siap dieksekusi oleh AI Coding Agent (seperti Antigravity, Cursor, Trae, atau Windsurf).
+<task_instruction>
+Buatlah daftar implementasi tugas (Checklist Tasks) yang berurutan secara logis kronologis untuk memandu AI Coding Agent (seperti Cursor, Windsurf, Trae, dsb).
+Pecah fitur proyek ini menjadi setidaknya 30 - 45 tugas instruktif kecil yang spesifik dan mendalam agar siap dieksekusi oleh AI Agent secara mandiri.
+Urutan logis yang disarankan: Setup Project -> Database Schema & Migrasi -> Backend API & Middleware -> UI Components -> Frontend Pages -> State & Integrasi API -> Testing.
 
-STACK TEKNOLOGI YANG DIGUNAKAN:
-${techs.map((t: any) => `- ${t.category}: ${t.technologyName}`).join("\n")}
+PENTING: Output Anda HARUS HANYA berupa JSON array murni tanpa pembungkus blok kode Markdown (\`\`\`json).
 
-INFORMASI CANVAS FITUR DAN SPESIFIKASI:
-${canvasFeaturesFormatted}
-
-ATURAN BREAKDOWN TASK (PENTING):
-1. JANGAN PERNAH menyertakan estimasi waktu (seperti jam, hari, story points, atau sprint). AI coding agent tidak butuh estimasi waktu!
-2. Urutan harus logis secara kronologis: Setup & Init -> Skema Database & Migrasi -> Backend API & Middleware -> UI Components -> Frontend Pages -> Integrasi API & State Management -> Testing & DevOps.
-3. Tulis setidaknya 30 - 45 task spesifik dan mendalam. Setiap task harus berupa instruksi mandiri yang jelas file apa yang dibuat/diedit, apa logika kodenya, dan bagaimana memverifikasinya.
-4. BAHASA: Tulis dalam ${project.language === "id" ? "Bahasa Indonesia yang jelas dan instruktif" : "English"}.
-
-FORMAT OUTPUT (PILIH SALAH SATU FORMAT BERIKUT):
-Format 1: JSON Array (Sangat Direkomendasikan)
-Tulis HANYA sebuah valid JSON array of objects tanpa pembungkus markdown (tanpa \`\`\`json). Contoh format:
+Format JSON yang Diharapkan:
 [
   {
-    "title": "Setup database table users dengan UUID primary key",
-    "category": "database",
-    "priority": "high",
-    "description": "Buat file src/db/schema/users.ts dengan kolom id UUID defaultRandom, email varchar, password text, role enum, createdAt timestamptz.",
+    "title": "Nama tugas spesifik (contoh: Setup database table users dengan UUID primary key)",
+    "category": "setup" | "database" | "backend" | "frontend" | "infra" | "testing",
+    "priority": "high" | "medium" | "low",
+    "description": "Instruksi mendalam tentang logika yang harus dibuat, nama file yang harus diedit/dibuat, penanganan error, dan cara verifikasinya.",
     "isAiGenerated": true
-  },
-  ...
+  }
 ]
-
-Format 2: Markdown List (Alternatif)
-Jika Anda menulis dalam Markdown, gunakan format list bernomor dengan label kategori di awal judul task. Contoh format:
-1. [database] Setup database table users dengan UUID primary key - Buat file src/db/schema/users.ts dengan kolom id UUID, email, password, role, createdAt.
-2. [backend] Implementasi endpoint POST /api/v1/auth/register - Buat controller register di src/controllers/auth.controller.ts dan validasi input menggunakan Zod.
-3. [frontend] Buat reusable component Button dengan variant primary, secondary, dan size - Buat file src/components/ui/button.tsx.
-
-Kategori yang valid: "setup", "database", "backend", "frontend", "infra", "testing".
-
-Output hanya list task dalam format JSON array (atau Markdown list) tanpa ada teks pembuka atau penutup lainnya.`;
+</task_instruction>`;
       } else if (documentType === "prompt") {
-        promptText += `
-=== INSTRUKSI GENERATE FOLDER & FILE WORKSPACE AI PROMPTS ===
-Peran Anda: Principal Prompt Engineer dan Tech Lead.
-Tugas Anda adalah menghasilkan struktur folder dan file prompt lengkap berisi instruksi modular dan aturan sistem untuk membangun aplikasi "${project.name}" (Ide: "${project.idea}").
+        const summariesContext = summaryFiles?.length
+          ? `\n\nRINGKASAN FOLDER LAIN:\nBerikut adalah ringkasan dari folder yang sudah dikerjakan sebelumnya:\n${summaryFiles.map(s => `[Folder: ${s.folderName}]\n${s.content}`).join("\n\n")}\n\n`
+          : "";
 
-STACK TEKNOLOGI YANG DIGUNAKAN:
-${techs.map((t: any) => `- ${t.category}: ${t.technologyName}`).join("\n")}
+        if (folderName) {
+          const foldersContext = foldersTree?.length 
+            ? `\nKonteks Workspace Saat Ini:\nBerikut adalah daftar folder dan file yang SUDAH ADA di proyek ini:\n${foldersTree.map(f => `- Folder: ${f.name}\n${f.files.length > 0 ? f.files.map(file => `  - ${file}`).join("\n") : "  (kosong)"}`).join("\n")}${summariesContext}\nKarena Anda HANYA fokus pada folder "${folderName}", JANGAN membuat ulang file atau instruksi yang sudah ada di folder lain (seperti yang terlihat pada ringkasan di atas). Hindari mencampuri ranah folder lain.`
+            : "";
 
-INFORMASI CANVAS FITUR DAN TARGET WORKFLOW:
-${canvasFeaturesFormatted}
+          promptText += `
+<task_instruction>
+Anda ditugaskan untuk membuat file instruksi AI (untuk agen seperti Cursor/Copilot) KHUSUS untuk folder "${folderName}".${foldersContext}
 
-ATURAN OUTPUT JSON (WAJIB DIPATUHI):
-1. Anda HARUS mengembalikan HANYA sebuah valid JSON object dengan key berbentuk "Nama_Folder/Nama_File.ext" (contoh: "01_Project_Setup/01_Project_Setup.md", "01_Project_Setup/.cursorrules", "02_Database_Migration/schema.sql") dan value berupa konten teks dari file tersebut. JANGAN menulis teks percakapan apa pun di luar JSON!
-2. Setiap isi file prompt harus sangat detail (1000 - 2000 kata per file utama), spesifik untuk arsitektur project, memberikan template kode lengkap tanpa placeholder, serta perintah command-line yang relevan.
-3. Pastikan semua tanda kutip ganda di dalam teks di-escape dengan benar (\\") dan baris baru ditulis sebagai \\n agar JSON valid dan bisa di-parse oleh JSON.parse().
-4. Tulis HANYA valid JSON object tanpa pembungkus markdown (tanpa \`\`\`json).
+PENTING:
+1. Anda BEBAS memecah instruksi menjadi beberapa file (lebih dari 1 file) di dalam folder "${folderName}" jika memang dibutuhkan agar lebih rapi dan terstruktur (misal: memisahkan instruksi routing, instruksi schema, dll).
+2. FOKUS MURNI pada fungsionalitas folder "${folderName}".
+3. JANGAN PERNAH membuat file bernama "README.md" (karena ini murni prompt/instruksi untuk agen AI, bukan dokumentasi GitHub).
+4. Setiap nama file HARUS diawali dengan angka urutan (contoh: 01_..., 02_..., 03_...). Urutan angka ini selalu dimulai dari 01_ untuk setiap folder baru.
+5. WAJIB BUAT FILE TERAKHIR: File paling akhir yang Anda hasilkan HARUS bernama "99_ringkasan.md" (atau angka terakhir urutan Anda). File ini WAJIB berisi ringkasan teknis dari seluruh perintah/prompt yang baru saja Anda buat di folder ini.
+6. Output Anda HARUS HANYA berupa JSON object murni tanpa pembungkus blok kode Markdown (\`\`\`json). Key adalah path file (wajib diawali dengan "${folderName}/"), dan value adalah isi konten teks/Markdown-nya.
 
-STRUKTUR FOLDER DEFAULT YANG HARUS ANDA GENERATE (Anda boleh menambahkan file/folder baru yang relevan):
-- "01_Project_Setup/01_Project_Setup.md" (Instruksi setup project)
-- "01_Project_Setup/.cursorrules" (AI Agent rules untuk project ini)
-- "02_Database_Migration/02_Database_Migration.md" (Instruksi Drizzle migrations)
-- "02_Database_Migration/schema.sql" (DDL SQL schema lengkap untuk PostgreSQL)
-- "03_Auth_System/03_Auth_System.md" (Instruksi autentikasi register/login/middleware)
-- "04_API_Endpoints/04_API_Endpoints.md" (Instruksi endpoint routes & controllers)
-- "05_Landing_Page/05_Landing_Page.md" (Instruksi UI landing marketing)
-- "06_Dashboard/06_Dashboard.md" (Instruksi UI dashboard admin/user)
-- "07_CRUD_Modules/07_CRUD_Modules.md" (Instruksi UI CRUD items)
-- "08_UI_Components/08_UI_Components.md" (Instruksi reusable component library)
-- "09_Testing_QA/09_Testing_QA.md" (Instruksi unit testing & E2E)
-- "10_Deployment_DevOps/10_Deployment.md" (Instruksi build & production deployment)
-- "10_Deployment_DevOps/Dockerfile" (Production Dockerfile config)
-- "10_Deployment_DevOps/docker-compose.yml" (Development/Production docker-compose service config)
-
-Contoh struktur JSON output:
+Format JSON yang Diharapkan:
 {
-  "01_Project_Setup/01_Project_Setup.md": "# Project Setup...",
-  "01_Project_Setup/.cursorrules": "You are an expert...",
-  "02_Database_Migration/schema.sql": "CREATE TABLE users..."
-}`;
+  "${folderName}/01_instruksi_utama.md": "# Modul: ${folderName}\\n\\n...",
+  "${folderName}/02_struktur_tambahan.md": "...",
+  "${folderName}/99_ringkasan.md": "Ringkasan: Pada modul ini, saya telah menginstruksikan pembuatan..."
+}
+
+Pastikan teks di dalam JSON di-escape dengan benar (" dan \\n) agar menjadi JSON string yang valid dan dapat di-parse dengan aman.
+</task_instruction>`;
+        } else {
+          promptText += `
+<task_instruction>
+Hasilkan struktur file prompt modular untuk menginisialisasi KESELURUHAN AI workspace (untuk semua folder utama) berdasarkan fitur proyek ini.
+
+PENTING:
+1. Anda BEBAS memecah instruksi menjadi beberapa file di dalam masing-masing folder agar rapi dan terstruktur.
+2. JANGAN menduplikasi file umum antar folder (contoh: buat .cursorrules cukup satu kali di folder Setup saja).
+3. JANGAN PERNAH membuat file bernama "README.md" (karena ini murni prompt/instruksi untuk agen AI, bukan dokumentasi GitHub).
+4. Setiap nama file HARUS diawali dengan angka urutan (contoh: 01_..., 02_..., 03_...). Urutan angka ini selalu me-reset/dimulai dari 01_ untuk setiap foldernya.
+5. WAJIB BUAT FILE TERAKHIR PER FOLDER: File paling akhir di setiap folder HARUS bernama "99_ringkasan.md". File ini berisi ringkasan teknis dari seluruh perintah/prompt di folder tersebut.
+6. Output Anda HARUS HANYA berupa JSON object murni tanpa pembungkus blok kode Markdown (\`\`\`json). Key adalah path file lengkap dengan foldernya, dan value adalah isi konten teks/Markdown-nya.
+
+Format JSON yang Diharapkan:
+{
+  "01_Project_Setup/01_setup_utama.md": "# Project Setup\\n\\nLangkah-langkah setup dengan dependensi...",
+  "01_Project_Setup/99_ringkasan.md": "Ringkasan setup...",
+  "02_Database_Migration/01_skema.md": "# Database Migration\\n\\nInstruksi database...",
+  "02_Database_Migration/99_ringkasan.md": "Ringkasan database..."
+}
+
+Pastikan teks di dalam JSON di-escape dengan benar (" dan \\n) agar menjadi JSON string yang valid dan dapat di-parse dengan aman.
+</task_instruction>`;
+        }
       }
 
-      await navigator.clipboard.writeText(promptText);
+      setPreviewPrompt(promptText);
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal menyusun prompt konteks.");
+    } finally {
+      setLoadingPreview(false);
+    }
+  }
+
+  async function handleCopyPrompt() {
+    if (!previewPrompt) return;
+    setLoading(true);
+    try {
+      await navigator.clipboard.writeText(previewPrompt);
       setCopied(true);
       toast.success("Prompt berhasil disalin ke clipboard!");
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error(err);
-      toast.error("Gagal menyusun prompt konteks.");
+      toast.error("Gagal menyalin prompt.");
     } finally {
       setLoading(false);
     }
@@ -306,23 +282,24 @@ Contoh struktur JSON output:
     setLoading(true);
     let contentToSave = manualContent.trim();
 
-    if (documentType === "prompt") {
-      // Robust JSON extraction (removes ```json ... ``` wrapper if present)
-      const cleaned = contentToSave.replace(/```json/g, "").replace(/```/g, "").trim();
+    if (documentType === "prompt" || documentType === "tasks") {
+      // Robust JSON extraction (removes \`\`\`json ... \`\`\` wrapper if present)
+      const cleaned = contentToSave.replace(/\`\`\`json/g, "").replace(/\`\`\`/g, "").trim();
       try {
         const parsed = JSON.parse(cleaned);
         
-        // Ensure all required fields exist
-        const requiredKeys = ["frontend", "backend", "database", "tasks"];
-        const missing = requiredKeys.filter(k => !parsed[k]);
-        
-        if (missing.length === 0) {
-          // Save validated clean JSON
-          contentToSave = JSON.stringify(parsed, null, 2);
+        if (documentType === "prompt") {
+          // Ensure all required fields exist
+          const requiredKeys = ["frontend", "backend", "database", "tasks"];
+          const missing = requiredKeys.filter(k => !parsed[k]);
+          // This check might need to be adapted based on the new JSON structure 
+          // if we moved away from those exact 4 keys. For now, keep it soft.
         }
+        
+        // Save validated clean JSON
+        contentToSave = JSON.stringify(parsed, null, 2);
       } catch (err) {
-        // Paste content is raw markdown, which is totally fine as frontend parser has a fallback regex parser for it.
-        console.log("Pasted content is raw Markdown, saving directly.");
+        console.log("Pasted content is not valid JSON, saving directly as raw text/markdown.");
       }
     }
 
@@ -351,81 +328,139 @@ Contoh struktur JSON output:
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-xl text-foreground max-h-[85vh] overflow-y-auto flex flex-col gap-4 p-5">
+      <DialogContent className="max-w-xl text-foreground max-h-[85vh] overflow-hidden flex flex-col gap-4 p-5">
         <DialogHeader className="space-y-1">
           <DialogTitle className="flex items-center gap-2 text-base">
             <span>Claude.ai / ChatGPT Collaborator</span>
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Jika Anda menemui batas limit API AI pada akun gratis, gunakan website Claude.ai secara gratis untuk menghasilkan dokumen lalu tempelkan kembali ke sini.
+            Gunakan prompt khusus ini di Claude.ai untuk menghasilkan dokumen secara profesional.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Side-by-side Grid for Steps 1 & 2 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="rounded-xl border border-border bg-muted/20 p-3 flex flex-col justify-between">
-              <div>
-                <h4 className="text-xs font-bold text-foreground">1. Salin Konteks Proyek</h4>
-                <p className="text-[10px] text-muted-foreground mt-1 leading-normal">
-                  Merangkum seluruh ide, stack teknologi, canvas fitur, dan jawaban wawancara untuk prompt Claude.
-                </p>
-              </div>
-              <Button
-                onClick={handleCopyPrompt}
-                disabled={loading}
-                className="w-full gap-2 text-primary-foreground text-xs mt-3 h-8.5"
-                variant={copied ? "secondary" : "default"}
-              >
-                {loading ? (
-                  <Loader2 size={13} className="animate-spin" />
-                ) : copied ? (
-                  <Check size={13} className="text-emerald-500" />
-                ) : (
-                  <Copy size={13} />
-                )}
-                {copied ? "Prompt Tersalin!" : "Salin Prompt Claude"}
+        {showFullPreview ? (
+          <div className="flex flex-col flex-1 h-[65vh] space-y-3 mt-2 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center border-b border-border pb-2">
+              <h3 className="text-sm font-semibold text-foreground">Preview Prompt Lengkap</h3>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setShowFullPreview(false)}>
+                Kembali
               </Button>
             </div>
-
-            <div className="rounded-xl border border-border bg-muted/20 p-3 flex flex-col justify-between">
-              <div>
-                <h4 className="text-xs font-bold text-foreground">2. Jalankan di Claude.ai</h4>
-                <p className="text-[10px] text-muted-foreground mt-1 leading-normal">
-                  Buka website Claude.ai, tempel prompt yang baru disalin, lalu tunggu AI menuliskan dokumen.
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                className="w-full gap-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5 text-foreground text-xs mt-3 h-8.5"
-                onClick={() => window.open("https://claude.ai", "_blank")}
-              >
-                <ExternalLink size={13} /> Buka Claude.ai
-              </Button>
-            </div>
-          </div>
-
-          {/* Textarea for Step 3 */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-foreground">3. Tempel Hasil ke Sini</label>
-            <Textarea
-              placeholder={`Tempelkan hasil markdown/JSON yang digenerate oleh Claude ke sini...`}
-              value={manualContent}
-              onChange={(e) => setManualContent(e.target.value)}
-              className="h-28 font-sans text-xs leading-relaxed text-foreground bg-background"
+            <Textarea 
+              readOnly 
+              value={previewPrompt} 
+              className="flex-1 min-h-[40vh] max-h-full overflow-y-auto text-xs font-mono bg-background/50 p-3 leading-relaxed resize-none focus-visible:ring-0"
             />
+            <Button
+              onClick={handleCopyPrompt}
+              disabled={loading}
+              className="w-full gap-2 text-primary-foreground text-xs mt-2"
+              variant={copied ? "secondary" : "default"}
+            >
+              {loading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : copied ? (
+                <Check size={13} className="text-emerald-500" />
+              ) : (
+                <Copy size={13} />
+              )}
+              {copied ? "Prompt Tersalin!" : "Salin Prompt Claude"}
+            </Button>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="space-y-4 overflow-y-auto pr-1">
+              {/* Side-by-side Grid for Steps 1 & 2 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="rounded-xl border border-border bg-muted/20 p-3 flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-foreground">1. Salin Konteks Proyek</h4>
+                    <p className="text-[10px] text-muted-foreground mt-1 leading-normal mb-2">
+                      Merangkum seluruh ide, stack teknologi, canvas fitur, dan jawaban wawancara untuk prompt Claude.
+                    </p>
+                    
+                    {/* Preview Box */}
+                    {loadingPreview ? (
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground my-4">
+                        <Loader2 size={12} className="animate-spin" /> Menyusun prompt...
+                      </div>
+                    ) : previewPrompt ? (
+                      <div className="mb-2 relative">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] font-semibold text-muted-foreground">Preview Prompt:</label>
+                          <button 
+                            onClick={() => setShowFullPreview(true)}
+                            className="text-[10px] flex items-center gap-1 text-primary hover:underline bg-transparent border-none p-0 cursor-pointer"
+                          >
+                            <Expand size={10} /> Perbesar
+                          </button>
+                        </div>
+                        <Textarea 
+                          readOnly 
+                          value={previewPrompt} 
+                          className="h-28 text-[10px] font-mono bg-background/50 resize-none p-2 leading-relaxed"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                  
+                  <Button
+                    onClick={handleCopyPrompt}
+                    disabled={loading || !previewPrompt}
+                    className="w-full gap-2 text-primary-foreground text-xs mt-auto h-8.5"
+                    variant={copied ? "secondary" : "default"}
+                  >
+                    {loading ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : copied ? (
+                      <Check size={13} className="text-emerald-500" />
+                    ) : (
+                      <Copy size={13} />
+                    )}
+                    {copied ? "Prompt Tersalin!" : "Salin Prompt Claude"}
+                  </Button>
+                </div>
 
-        <div className="flex justify-end gap-2 pt-3 border-t border-border mt-1">
-          <Button variant="ghost" size="sm" onClick={() => setOpen(false)} disabled={loading} className="text-muted-foreground hover:text-foreground text-xs">
-            Batal
-          </Button>
-          <Button size="sm" onClick={handleSaveManual} disabled={loading || !manualContent.trim()} className="text-primary-foreground text-xs">
-            {loading && <Loader2 size={13} className="animate-spin mr-1" />}
-            Simpan Dokumen & Lanjutkan
-          </Button>
-        </div>
+                <div className="rounded-xl border border-border bg-muted/20 p-3 flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-foreground">2. Jalankan di Claude.ai</h4>
+                    <p className="text-[10px] text-muted-foreground mt-1 leading-normal">
+                      Buka website Claude.ai, tempel prompt yang baru disalin, lalu tunggu AI menuliskan dokumen.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5 text-foreground text-xs mt-3 h-8.5"
+                    onClick={() => window.open("https://claude.ai", "_blank")}
+                  >
+                    <ExternalLink size={13} /> Buka Claude.ai
+                  </Button>
+                </div>
+              </div>
+
+              {/* Textarea for Step 3 */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-foreground">3. Tempel Hasil ke Sini</label>
+                <Textarea
+                  placeholder={`Tempelkan hasil markdown/JSON yang digenerate oleh Claude ke sini...`}
+                  value={manualContent}
+                  onChange={(e) => setManualContent(e.target.value)}
+                  className="h-28 font-sans text-xs leading-relaxed text-foreground bg-background"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-border mt-1">
+              <Button variant="ghost" size="sm" onClick={() => setOpen(false)} disabled={loading} className="text-muted-foreground hover:text-foreground text-xs">
+                Batal
+              </Button>
+              <Button size="sm" onClick={handleSaveManual} disabled={loading || !manualContent.trim()} className="text-primary-foreground text-xs">
+                {loading && <Loader2 size={13} className="animate-spin mr-1" />}
+                Simpan Dokumen & Lanjutkan
+              </Button>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
