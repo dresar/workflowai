@@ -79,7 +79,7 @@ export class RotationEngine {
       const availableKeys = keys.filter((k) => !this.triedKeyIds.has(k.id));
 
       if (availableKeys.length === 0) {
-        logRotation({ providerId: provider.id }, `No available keys for provider ${provider.name}`);
+        logRotation({ providerId: provider.id }, `No uncooled keys for provider ${provider.name}, rotating to next provider`);
         this.triedProviderIds.add(provider.id);
         continue;
       }
@@ -92,6 +92,10 @@ export class RotationEngine {
         decryptedKey = decrypt(selectedKey.keyEncrypted);
       } catch {
         logError({}, `Failed to decrypt key ${selectedKey.id}`);
+        continue;
+      }
+
+      if (!decryptedKey) {
         continue;
       }
 
@@ -118,10 +122,65 @@ export class RotationEngine {
       };
     }
 
+    // Environmental Key Fallback: Check if environment variables contain API keys
+    const envGemini = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY;
+    if (envGemini) {
+      const firstKey = envGemini.split(',')[0].trim();
+      if (firstKey && !this.triedKeyIds.has('env-gemini-fallback')) {
+        this.triedKeyIds.add('env-gemini-fallback');
+        return {
+          id: 'env-gemini-fallback',
+          apiKey: firstKey,
+          providerId: 'env-provider',
+          providerName: 'gemini',
+          model: 'gemini-3.1-flash-lite-preview',
+          timeoutMs: 60000,
+          maxRetries: 3,
+        };
+      }
+    }
+
+    const envGroq = process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY;
+    if (envGroq) {
+      const firstKey = envGroq.split(',')[0].trim();
+      if (firstKey && !this.triedKeyIds.has('env-groq-fallback')) {
+        this.triedKeyIds.add('env-groq-fallback');
+        return {
+          id: 'env-groq-fallback',
+          apiKey: firstKey,
+          providerId: 'env-provider',
+          providerName: 'groq',
+          model: 'llama-3.3-70b-versatile',
+          timeoutMs: 30000,
+          maxRetries: 3,
+        };
+      }
+    }
+
     throw new AllProvidersExhaustedError();
   }
 
-  async markKeyFailed(keyId: string, cooldownMinutes: number): Promise<void> {
+  async markKeyFailed(keyId: string, cooldownMinutes: number, isPermanent = false): Promise<void> {
+    if (keyId.startsWith('env-')) {
+      this.addEvent({ type: 'cooldown', apiKeyId: keyId, reason: 'Env fallback key failed' });
+      return;
+    }
+
+    if (isPermanent) {
+      await db
+        .update(apiKeys)
+        .set({
+          isActive: false,
+          failedRequests: db.$count(apiKeys, eq(apiKeys.id, keyId)),
+          updatedAt: new Date(),
+        })
+        .where(eq(apiKeys.id, keyId));
+
+      this.addEvent({ type: 'cooldown', apiKeyId: keyId, reason: 'Permanently deactivated (invalid API key)' });
+      logRotation({ keyId }, 'Key permanently deactivated (invalid API key)');
+      return;
+    }
+
     const cooldownUntil = new Date(Date.now() + cooldownMinutes * 60 * 1000);
     await db
       .update(apiKeys)
@@ -137,6 +196,9 @@ export class RotationEngine {
   }
 
   async markKeySuccess(keyId: string): Promise<void> {
+    if (keyId.startsWith('env-')) {
+      return;
+    }
     await db
       .update(apiKeys)
       .set({

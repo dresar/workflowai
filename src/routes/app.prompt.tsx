@@ -42,150 +42,68 @@ interface PromptFolder {
 // 10 DEFAULT FOLDERS & FILES BUILDER
 // ============================================================
 function buildDefaultFolders(projectName: string, techStack: string[], blueprintInfo: string, tasksInfo: string, prdInfo: string): PromptFolder[] {
-  const techLine = techStack.join(', ') || 'React, TypeScript, Node.js, PostgreSQL, Tailwind CSS';
   const folders: PromptFolder[] = [
     {
       id: 'f_setup', name: '01_Project_Setup', description: 'Setup, inisialisasi folder, dan rules konfigurasi',
       files: [
-        {
-          id: 'file_setup_prompt',
-          name: '01_Project_Setup.md',
-          description: 'Instruksi setup project utama',
-          content: generatePromptContent({ id: 'setup', number: '01', title: 'Project Setup & Structure', description: '', filename: '01_Project_Setup.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
-        },
-        {
-          id: 'file_cursorrules',
-          name: '.cursorrules',
-          description: 'Sistem rules AI Agent',
-          content: `You are an expert full-stack developer building ${projectName}.
-
-## Tech Stack
-${techLine}
-
-## Code Style Rules
-1. Always use TypeScript strict mode.
-2. Maintain modular file architecture.
-3. Handle error exceptions cleanly.
-4. JANGAN gunakan placeholder. Tulis kode fungsional penuh.`,
-        }
+        { id: 'file_setup_prompt', name: '01_Project_Setup.md', description: 'Instruksi setup project utama', content: '' },
+        { id: 'file_cursorrules', name: '.cursorrules', description: 'Sistem rules AI Agent', content: '' }
       ]
     },
     {
       id: 'f_database', name: '02_Database_Migration', description: 'Skema database PostgreSQL, Drizzle ORM, dan seed data',
       files: [
-        {
-          id: 'file_db_prompt',
-          name: '02_Database_Migration.md',
-          description: 'Instruksi Drizzle migration',
-          content: generatePromptContent({ id: 'database', number: '02', title: 'Database Schema & Migration', description: '', filename: '02_Database_Migration.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
-        },
-        {
-          id: 'file_db_schema',
-          name: 'schema.sql',
-          description: 'SQL DDL schema murni',
-          content: '-- PostgreSQL SQL DDL schema\n-- Silakan generate dari AI atau tulis di sini.',
-        }
+        { id: 'file_db_prompt', name: '02_Database_Migration.md', description: 'Instruksi Drizzle migration', content: '' },
+        { id: 'file_db_schema', name: 'schema.sql', description: 'SQL DDL schema murni', content: '' }
       ]
     },
     {
       id: 'f_auth', name: '03_Auth_System', description: 'Autentikasi register, login, JWT token, dan auth middleware',
       files: [
-        {
-          id: 'file_auth_prompt',
-          name: '03_Auth_System.md',
-          description: 'Instruksi pembuatan Auth system',
-          content: generatePromptContent({ id: 'auth', number: '03', title: 'Authentication System', description: '', filename: '03_Auth_System.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
-        }
+        { id: 'file_auth_prompt', name: '03_Auth_System.md', description: 'Instruksi pembuatan Auth system', content: '' }
       ]
     },
     {
       id: 'f_api', name: '04_API_Endpoints', description: 'API routes, controller, validasi Zod, dan standard error handling',
       files: [
-        {
-          id: 'file_api_prompt',
-          name: '04_API_Endpoints.md',
-          description: 'Instruksi core API routes',
-          content: generatePromptContent({ id: 'api', number: '04', title: 'Core API Endpoints', description: '', filename: '04_API_Endpoints.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
-        }
+        { id: 'file_api_prompt', name: '04_API_Endpoints.md', description: 'Instruksi core API routes', content: '' }
       ]
     },
     {
       id: 'f_landing', name: '05_Landing_Page', description: 'Tampilan marketing landing page responsive',
       files: [
-        {
-          id: 'file_landing_prompt',
-          name: '05_Landing_Page.md',
-          description: 'Instruksi Landing page',
-          content: generatePromptContent({ id: 'landing', number: '05', title: 'Landing Page & Marketing', description: '', filename: '05_Landing_Page.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
-        }
+        { id: 'file_landing_prompt', name: '05_Landing_Page.md', description: 'Instruksi Landing page', content: '' }
       ]
     },
     {
       id: 'f_dashboard', name: '06_Dashboard', description: 'Halaman dashboard internal user/admin, widget KPI, dan charts',
       files: [
-        {
-          id: 'file_dashboard_prompt',
-          name: '06_Dashboard.md',
-          description: 'Instruksi Dashboard UI',
-          content: generatePromptContent({ id: 'dashboard', number: '06', title: 'Dashboard & Analytics', description: '', filename: '06_Dashboard.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
-        }
+        { id: 'file_dashboard_prompt', name: '06_Dashboard.md', description: 'Instruksi Dashboard UI', content: '' }
       ]
     },
     {
       id: 'f_crud', name: '07_CRUD_Modules', description: 'Modul halaman list data, form entri, edit, dan delete confirmation',
       files: [
-        {
-          id: 'file_crud_prompt',
-          name: '07_CRUD_Modules.md',
-          description: 'Instruksi CRUD core modules',
-          content: generatePromptContent({ id: 'crud', number: '07', title: 'Core CRUD Modules', description: '', filename: '07_CRUD_Modules.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
-        }
+        { id: 'file_crud_prompt', name: '07_CRUD_Modules.md', description: 'Instruksi CRUD core modules', content: '' }
       ]
     },
     {
       id: 'f_components', name: '08_UI_Components', description: 'Reusable UI elements, form elements, dialog, dan tables',
       files: [
-        {
-          id: 'file_components_prompt',
-          name: '08_UI_Components.md',
-          description: 'Instruksi UI library components',
-          content: generatePromptContent({ id: 'components', number: '08', title: 'UI Component Library', description: '', filename: '08_UI_Components.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
-        }
+        { id: 'file_components_prompt', name: '08_UI_Components.md', description: 'Instruksi UI library components', content: '' }
       ]
     },
     {
       id: 'f_testing', name: '09_Testing_QA', description: 'Setup unit testing (Vitest) dan E2E testing (Playwright)',
       files: [
-        {
-          id: 'file_testing_prompt',
-          name: '09_Testing_QA.md',
-          description: 'Instruksi testing QA',
-          content: generatePromptContent({ id: 'testing', number: '09', title: 'Testing & Quality Assurance', description: '', filename: '09_Testing_QA.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
-        }
+        { id: 'file_testing_prompt', name: '09_Testing_QA.md', description: 'Instruksi testing QA', content: '' }
       ]
     },
     {
       id: 'f_deployment', name: '10_Deployment_DevOps', description: 'Dockerization, script docker-compose, dan GitHub Actions CI/CD',
       files: [
-        {
-          id: 'file_deploy_prompt',
-          name: '10_Deployment.md',
-          description: 'Instruksi deployment & DevOps',
-          content: generatePromptContent({ id: 'deployment', number: '10', title: 'Deployment & DevOps', description: '', filename: '10_Deployment.md' } as any, projectName, techStack, blueprintInfo, tasksInfo, prdInfo),
-        },
-        {
-          id: 'file_dockerfile',
-          name: 'Dockerfile',
-          description: 'Docker build definition',
-          content: `FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-EXPOSE 3000
-CMD ["npm", "start"]`,
-        }
+        { id: 'file_deploy_prompt', name: '10_Deployment.md', description: 'Instruksi deployment & DevOps', content: '' },
+        { id: 'file_dockerfile', name: 'Dockerfile', description: 'Docker build definition', content: '' }
       ]
     }
   ];
@@ -796,26 +714,29 @@ function PromptPage() {
         } catch {}
       }
 
-      // Jika data DB kosong, inisialisasi dengan default folders
-      if (initialFolders.length === 0) {
-        initialFolders = buildDefaultFolders(name, tech, blueprintInfo, tasksInfo, prdInfo);
-        // Simpan inisialisasi default ke DB agar konsisten
-        api.projects.saveDocumentManual(projectId, "prompt", { content: JSON.stringify(initialFolders) }).catch(() => {});
-      }
-
+      // Mulai dengan folder kosong jika belum ada data yang digenerate/disimpan di DB
       setFolders(initialFolders);
-
-      // Auto-trigger AI generate jika datang dari Blueprint page
-      const autoGen = localStorage.getItem("auto_trigger_prompt_gen");
-      if (autoGen === "true") {
-        localStorage.removeItem("auto_trigger_prompt_gen");
-        // Trigger generate all setelah set state selesai
-        setTimeout(() => {
-          handleGenerateAll();
-        }, 800);
+      if (initialFolders.length > 0) {
+        setActiveFolderId(initialFolders[0].id);
+        setActiveFileId(initialFolders[0].files[0]?.id || null);
+      } else {
+        setActiveFolderId('');
+        setActiveFileId(null);
       }
     });
   }, []);
+
+  async function handleClearAllFolders() {
+    if (!confirm("Apakah Anda yakin ingin menghapus seluruh folder & file prompt di workspace ini? Halaman akan kembali bersih & kosong.")) return;
+    const projectId = localStorage.getItem("active_project_id");
+    setFolders([]);
+    setActiveFolderId('');
+    setActiveFileId(null);
+    if (projectId) {
+      await api.projects.saveDocumentManual(projectId, "prompt", { content: "" }).catch(() => {});
+    }
+    toast.success("Seluruh folder & file prompt berhasil dihapus");
+  }
 
   async function handleGenerateAll() {
     const projectId = localStorage.getItem("active_project_id");
@@ -1313,6 +1234,12 @@ ${techStack.length > 0 ? techStack.map(t => `- **${t}**`).join('\n') : `- React 
             summaryFiles={folders.flatMap((f: any) => f.files.filter((file: any) => file.name.toLowerCase().includes("ringkasan")).map((file: any) => ({ folderName: f.name, content: file.content })))}
           />
 
+          {folders.length > 0 && (
+            <Button onClick={handleClearAllFolders} variant="outline" size="sm" className="text-[11px] h-8 gap-1.5 border-rose-900/40 text-rose-400 hover:bg-rose-950/40">
+              <Lucide.Trash2 size={12} /> Hapus Semua Folder
+            </Button>
+          )}
+
           <Button onClick={downloadZIP} disabled={downloadingZip} size="sm" className="text-[11px] h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white">
             {downloadingZip ? <Lucide.Loader2 size={12} className="animate-spin" /> : <Lucide.Archive size={12} />}
             Unduh ZIP Lengkap
@@ -1331,14 +1258,27 @@ ${techStack.length > 0 ? techStack.map(t => `- **${t}**`).join('\n') : `- React 
             <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
               <div className="h-full bg-gradient-to-r from-indigo-600 to-violet-500 transition-all" style={{ width: `${pctReady}%` }} />
             </div>
-            <Button
-              onClick={() => setShowAddFolderModal(true)}
-              variant="outline"
-              size="sm"
-              className="w-full text-[10px] h-7 gap-1 border-slate-700 bg-slate-900/40 text-slate-300 hover:bg-slate-800"
-            >
-              <Lucide.FolderPlus size={11} className="mr-0.5" /> Tambah Folder
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button
+                onClick={() => setShowAddFolderModal(true)}
+                variant="outline"
+                size="sm"
+                className="flex-1 text-[10px] h-7 gap-1 border-slate-700 bg-slate-900/40 text-slate-300 hover:bg-slate-800"
+              >
+                <Lucide.FolderPlus size={11} className="mr-0.5" /> Tambah Folder
+              </Button>
+              {folders.length > 0 && (
+                <Button
+                  onClick={handleClearAllFolders}
+                  variant="outline"
+                  size="sm"
+                  title="Hapus Semua Folder & Reset Workspace"
+                  className="text-[10px] h-7 px-2 border-rose-900/40 text-rose-400 hover:bg-rose-950/40 hover:text-rose-300"
+                >
+                  <Lucide.Trash2 size={11} /> Reset
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="flex-1 p-3 space-y-1.5 overflow-y-auto font-sans">
@@ -1591,8 +1531,37 @@ ${techStack.length > 0 ? techStack.map(t => `- **${t}**`).join('\n') : `- React 
                         <code>{activeFile.content}</code>
                       </pre>
                     ) : (
-                      <div className="text-center py-20 text-slate-500 text-xs">
-                        — Konten prompt kosong. Klik "Generate AI (File Ini)" di atas atau beralih ke "Edit Raw" untuk mengisinya secara manual —
+                      <div className="flex flex-col items-center justify-center py-16 px-4 text-center max-w-lg mx-auto space-y-5">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                          <Lucide.FileText size={24} />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-bold text-slate-200">File "{activeFile.name}" Masih Kosong</h4>
+                          <p className="text-xs text-slate-400">Pilih metode penyusunan prompt untuk modul file ini:</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full pt-2">
+                          <ClaudeCollaboratorModal
+                            projectId={projectId || ""}
+                            documentType="prompt"
+                            onSaveSuccess={handleImportClaudeJson}
+                            foldersTree={folders.map((f: any) => ({ name: f.name, files: f.files.map((file: any) => file.name) }))}
+                            summaryFiles={folders.flatMap((f: any) => f.files.filter((file: any) => file.name.toLowerCase().includes("ringkasan")).map((file: any) => ({ folderName: f.name, content: file.content })))}
+                            triggerButton={
+                              <Button className="w-full text-xs h-9 bg-amber-600 hover:bg-amber-500 text-white font-semibold gap-1.5">
+                                <Lucide.Sparkles size={13} /> Bantuan Claude 3.5
+                              </Button>
+                            }
+                          />
+                          <Button
+                            onClick={handleGenerateActive}
+                            disabled={generatingActive || generating}
+                            variant="outline"
+                            className="w-full text-xs h-9 border-indigo-500/40 text-indigo-300 hover:bg-indigo-950/40 gap-1.5"
+                          >
+                            {generatingActive ? <Lucide.Loader2 size={13} className="animate-spin" /> : <Lucide.Cpu size={13} />}
+                            Generate AI (File Ini)
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1600,8 +1569,73 @@ ${techStack.length > 0 ? techStack.map(t => `- **${t}**`).join('\n') : `- React 
               )}
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-slate-500 text-xs">
-              Pilih folder atau file di panel kiri untuk mulai bekerja.
+            <div className="flex-1 flex flex-col items-center justify-center p-8 max-w-2xl mx-auto text-center space-y-6">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 shadow-xl">
+                <Lucide.Sparkles size={28} className="animate-pulse" />
+              </div>
+
+              <div className="space-y-1.5">
+                <h2 className="text-base font-bold text-slate-100">Workspace AI Prompts</h2>
+                <p className="text-xs text-slate-400 leading-relaxed max-w-md mx-auto">
+                  Silakan klik file <code>.md</code> pada sidebar kiri untuk melihat/mengedit prompt, atau pilih metode pembuatannya di bawah ini:
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full text-left pt-2">
+                {/* Option 1: Claude AI Manual (Rekomendasi) */}
+                <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-950/20 hover:border-amber-500/50 transition-all flex flex-col justify-between space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wider">
+                        Rekomendasi Utama
+                      </span>
+                      <Lucide.Sparkles size={14} className="text-amber-400" />
+                    </div>
+                    <h3 className="text-xs font-bold text-amber-200">Gunakan Bantuan Claude.ai</h3>
+                    <p className="text-[10.5px] text-slate-400 mt-1 leading-relaxed">
+                      Salin konteks proyek lengkap (Canvas + PRD + Tasks), generate 10 modul prompt bebas limit di Claude Web, lalu tempel hasilnya di sini.
+                    </p>
+                  </div>
+
+                  <ClaudeCollaboratorModal
+                    projectId={projectId || ""}
+                    documentType="prompt"
+                    onSaveSuccess={handleImportClaudeJson}
+                    foldersTree={folders.map((f: any) => ({ name: f.name, files: f.files.map((file: any) => file.name) }))}
+                    summaryFiles={folders.flatMap((f: any) => f.files.filter((file: any) => file.name.toLowerCase().includes("ringkasan")).map((file: any) => ({ folderName: f.name, content: file.content })))}
+                    triggerButton={
+                      <Button className="w-full text-xs h-8 bg-amber-600 hover:bg-amber-500 text-white font-semibold gap-1.5">
+                        <Lucide.Sparkles size={13} /> Buka Kolaborator Claude
+                      </Button>
+                    }
+                  />
+                </div>
+
+                {/* Option 2: AI Bawaan Otomatis */}
+                <div className="p-4 rounded-xl border border-indigo-700/30 bg-indigo-950/20 hover:border-indigo-600/50 transition-all flex flex-col justify-between space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
+                        Otomatis (Internal API)
+                      </span>
+                      <Lucide.Cpu size={14} className="text-indigo-400" />
+                    </div>
+                    <h3 className="text-xs font-bold text-indigo-200">AI Bawaan System</h3>
+                    <p className="text-[10.5px] text-slate-400 mt-1 leading-relaxed">
+                      Gunakan AI internal (Gemini / Groq) untuk langsung meng-generate 10 modul prompt secara berurutan.
+                    </p>
+                  </div>
+
+                  <Button
+                    onClick={handleGenerateAll}
+                    disabled={generating}
+                    className="w-full text-xs h-8 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold gap-1.5"
+                  >
+                    {generating ? <Lucide.Loader2 size={13} className="animate-spin" /> : <Lucide.Cpu size={13} />}
+                    {generating ? "AI Generating..." : "Generate Otomatis (AI)"}
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </main>

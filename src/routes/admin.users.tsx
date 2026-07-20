@@ -144,10 +144,21 @@ function UsersPage() {
     }
   }
 
+  async function handleAddTokens(u: User, amount: number) {
+    try {
+      const nextTokens = (u.promptTokens ?? 0) + amount;
+      await api.admin.users.update(u.id, { promptTokens: nextTokens });
+      setUsers(prev => prev.map(item => item.id === u.id ? { ...item, promptTokens: nextTokens } : item));
+      toast.success(`Berhasil menambahkan ${amount} token prompt untuk ${u.name}!`);
+    } catch {
+      toast.error("Gagal menambah token");
+    }
+  }
+
   return (
     <AdminPage
       title="Kelola User"
-      subtitle="Manajemen akun pengguna dan peran (role) sistem"
+      subtitle="Manajemen akun pengguna, peran (role) sistem, dan penambahan kuota token prompt"
       actions={
         <Button onClick={handleOpenCreate}>
           <Plus className="mr-2 h-4 w-4" /> Tambah User
@@ -183,7 +194,20 @@ function UsersPage() {
                         {u.role}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-white font-medium">{u.promptTokens ?? 0}</TableCell>
+                    <TableCell className="text-white font-medium">
+                      <div className="flex items-center gap-2">
+                        <span>{u.promptTokens ?? 0}</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 text-[10px] px-2 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                          onClick={() => handleAddTokens(u, 50)}
+                          title="Tambah 50 Token Prompt"
+                        >
+                          +50 Token
+                        </Button>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <button onClick={() => handleToggleActive(u)} className="cursor-pointer">
                         <Badge variant={u.isActive ? "default" : "outline"} className="text-[10px]">
@@ -196,7 +220,7 @@ function UsersPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
-                        <Button size="icon" variant="ghost" title="Edit" onClick={() => handleOpenEdit(u)}><Pencil size={14} /></Button>
+                        <Button size="icon" variant="ghost" title="Edit Detail / Token" onClick={() => handleOpenEdit(u)}><Pencil size={14} /></Button>
                         <Button size="icon" variant="ghost" title="Hapus" className="hover:text-destructive" onClick={() => handleDelete(u.id)}><Trash2 size={14} /></Button>
                       </div>
                     </TableCell>

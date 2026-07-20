@@ -56,7 +56,7 @@ export class AIOrchestrator {
       let selectedKey;
 
       try {
-        selectedKey = await rotationEngine.selectKey(preferredProvider);
+        selectedKey = await rotationEngine.selectKey(attempt === 0 ? preferredProvider : undefined);
       } catch (err) {
         if (err instanceof AllProvidersExhaustedError) {
           logError({ projectId, generateType }, 'All providers exhausted', err);
@@ -140,7 +140,12 @@ export class AIOrchestrator {
           contextSummary: err instanceof Error ? err.message : 'Unknown error',
         });
 
-        await rotationEngine.markKeyFailed(selectedKey.id, cooldownMinutes);
+        const isInvalidKey = err instanceof Error && (
+          err.message.includes('API_KEY_INVALID') ||
+          err.message.includes('API key not valid') ||
+          err.message.includes('invalid_api_key')
+        );
+        await rotationEngine.markKeyFailed(selectedKey.id, cooldownMinutes, isInvalidKey);
         await this.saveRequestLog(projectId, generateType, selectedKey.id, null, false, rotationEngine.getEvents(), err);
       }
     }

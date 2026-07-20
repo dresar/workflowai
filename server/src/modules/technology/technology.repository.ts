@@ -1,6 +1,6 @@
 import { db } from '../../database/connection';
 import { technologies } from '../../database/schema';
-import { eq, like, asc, sql } from 'drizzle-orm';
+import { and, eq, like, asc, sql } from 'drizzle-orm';
 import type { PaginationParams } from '../../shared/types/api-response.types';
 import { calcOffset } from '../../shared/utils/pagination.util';
 
@@ -12,20 +12,16 @@ export class TechnologyRepository {
     const { page, limit, category, search, activeOnly } = params;
     const offset = calcOffset(page, limit);
 
-    const where = sql`TRUE`;
-    const conditions: ReturnType<typeof eq>[] = [];
+    const conditions: any[] = [];
 
     if (activeOnly) conditions.push(eq(technologies.isActive, true));
     if (category && category !== 'all') conditions.push(eq(technologies.category, category));
+    if (search && search.trim()) conditions.push(like(technologies.name, `%${search.trim()}%`));
 
     const query = db
       .select()
       .from(technologies)
-      .where(
-        conditions.length > 0
-          ? sql`${conditions.reduce((acc, c) => sql`${acc} AND ${c}`, sql`TRUE`)}`
-          : undefined,
-      )
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(asc(technologies.sortOrder), asc(technologies.name))
       .limit(limit)
       .offset(offset);

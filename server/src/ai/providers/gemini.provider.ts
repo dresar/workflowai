@@ -80,7 +80,7 @@ export class GeminiProvider implements AIProvider {
   async validateKey(apiKey: string): Promise<boolean> {
     try {
       const client = new GoogleGenerativeAI(apiKey);
-      const model = client.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const model = client.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' });
       await model.generateContent('test');
       return true;
     } catch {

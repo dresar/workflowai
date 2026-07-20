@@ -6,6 +6,7 @@ export const technologies = pgTable('technologies', {
   category: varchar('category', { length: 100 }).notNull(),
   version: varchar('version', { length: 50 }),
   description: text('description'),
+  iconUrl: text('icon_url'),
   isActive: boolean('is_active').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

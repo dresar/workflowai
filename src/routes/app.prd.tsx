@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 import { api } from "@/lib/api";
 import { ClaudeCollaboratorModal } from "@/components/claude-collaborator-modal";
@@ -277,15 +277,23 @@ function PRDPage() {
   const [generating, setGenerating] = useState(false);
   const [savingDb, setSavingDb] = useState(false);
   const [showPromptChoiceModal, setShowPromptChoiceModal] = useState(false);
+  const [showClaudeModal, setShowClaudeModal] = useState(false);
+  const [openCollaboratorModal, setOpenCollaboratorModal] = useState(false);
 
   useEffect(() => {
-    if (!projectId) {
-      setLoading(false);
-      return;
-    }
-
     async function loadPRD() {
-      if (!projectId) return;
+      if (!projectId) {
+        setLoading(false);
+        return;
+      }
+      
+      // Auto show recommendation modal once on PRD page load
+      const seen = localStorage.getItem(`seen_claude_prd_modal_${projectId}`);
+      if (!seen) {
+        setShowClaudeModal(true);
+        localStorage.setItem(`seen_claude_prd_modal_${projectId}`, "true");
+      }
+
       try {
         // 1. Coba load dari localStorage
         const local = localStorage.getItem(`prd_content_${projectId}`);
@@ -429,7 +437,12 @@ function PRDPage() {
     <div className="flex h-full flex-col overflow-hidden bg-[#070a0f]">
       {/* Top Bar */}
       <div className="flex items-center justify-between border-b border-slate-800/60 bg-slate-950/80 px-5 py-2.5 backdrop-blur-md z-10 relative">
-        <StageBar active={2} />
+        <div className="flex items-center gap-3">
+          <StageBar active={2} />
+          <span className="text-[10px] font-semibold text-amber-300 bg-amber-950/40 border border-amber-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1 cursor-pointer" onClick={() => setShowClaudeModal(true)} title="Gunakan kolaborator Claude 3.5 / 3.7 Sonnet">
+            <Sparkles size={10} className="text-amber-400" /> Rec: Claude 3.5 / 3.7 Sonnet
+          </span>
+        </div>
         <div className="flex items-center gap-2">
           <Button onClick={() => navigate({ to: "/app/tasks" })} variant="outline" size="sm" className="text-[11px] h-8 gap-1.5 border-slate-700">
             <ArrowRight size={12} className="rotate-180" /> Tasks
@@ -453,7 +466,14 @@ function PRDPage() {
             </>
           )}
           <ClaudeCollaboratorModal projectId={projectId || ""} documentType="prd" onSaveSuccess={(newContent) => { setContent(newContent); setHasNoPrd(false); }} />
-          <Button onClick={() => setShowPromptChoiceModal(true)} disabled={hasNoPrd || savingDb} size="sm" className="text-[11px] h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white">
+          <Button onClick={async () => {
+            if (projectId && content) {
+              setSavingDb(true);
+              await api.projects.saveDocumentManual(projectId, "prd", { content }).catch(() => {});
+              setSavingDb(false);
+            }
+            navigate({ to: "/app/prompt" });
+          }} disabled={hasNoPrd || savingDb} size="sm" className="text-[11px] h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold">
             {savingDb ? <Loader2 size={12} className="animate-spin" /> : null}
             Blueprint Selesai → Buat Prompts <ArrowRight size={12} />
           </Button>
@@ -472,6 +492,8 @@ function PRDPage() {
               <p className="text-xs text-slate-500">Mencakup seluruh context halaman UI, API endpoint, dan skema database</p>
             </div>
           </div>
+
+
 
           {hasNoPrd ? (
             <div className="flex flex-col items-center justify-center py-20 text-center max-w-md mx-auto">
@@ -582,6 +604,46 @@ function PRDPage() {
               Batal
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Claude Recommendation Dialog */}
+      <Dialog open={showClaudeModal} onOpenChange={setShowClaudeModal}>
+        <DialogContent className="max-w-sm border-amber-500/30 bg-slate-900 text-slate-100 shadow-2xl rounded-2xl p-5">
+          <DialogHeader className="flex flex-col items-center text-center pt-1">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 mb-2">
+              <Sparkles size={22} className="animate-pulse" />
+            </div>
+            <DialogTitle className="text-sm font-bold text-amber-200">
+              ⚡ Rekomendasi: Claude 3.5 / 3.7 Sonnet (2026)
+            </DialogTitle>
+            <DialogDescription className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+              Hasil PRD & Arsitektur paling presisi jika dibuat menggunakan <strong>Claude Sonnet (Claude AI 2026)</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="flex flex-col gap-2 pt-2">
+            <ClaudeCollaboratorModal
+              projectId={projectId || ""}
+              documentType="prd"
+              onSaveSuccess={(newContent) => {
+                setContent(newContent);
+                setHasNoPrd(false);
+                setShowClaudeModal(false);
+              }}
+              triggerButton={
+                <Button
+                  size="sm"
+                  className="w-full text-xs bg-amber-600 hover:bg-amber-500 text-white font-semibold gap-1.5"
+                >
+                  <Sparkles size={13} /> Gunakan Kolaborator Claude
+                </Button>
+              }
+            />
+            <Button variant="ghost" onClick={() => setShowClaudeModal(false)} size="sm" className="w-full text-xs text-slate-500 hover:text-slate-300">
+              Lanjut dengan Model Default
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

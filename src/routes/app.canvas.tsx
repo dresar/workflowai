@@ -102,33 +102,115 @@ function buildGraph(
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
-  // Resolve groups
-  const resolvedFE = FRONTEND_GROUPS.map(g => ({
-    ...g,
-    pages:     blueprint.pages.filter(g.filter.pages!),
-    endpoints: [] as ApiEndpointItem[],
-    tables:    [] as TableItem[],
-    count:     blueprint.pages.filter(g.filter.pages!).length,
-    preview:   blueprint.pages.filter(g.filter.pages!).map(p => p.name),
-  })).filter(g => g.count > 0);
+  // Track assigned items
+  const assignedPages = new Set<string>();
+  const assignedEndpoints = new Set<string>();
+  const assignedTables = new Set<string>();
 
-  const resolvedBE = BACKEND_GROUPS.map(g => ({
-    ...g,
-    pages:     [] as PageItem[],
-    endpoints: blueprint.apiEndpoints.filter(g.filter.endpoints!),
-    tables:    [] as TableItem[],
-    count:     blueprint.apiEndpoints.filter(g.filter.endpoints!).length,
-    preview:   blueprint.apiEndpoints.filter(g.filter.endpoints!).map(e => e.path),
-  })).filter(g => g.count > 0);
+  // 1. Resolve Frontend Groups
+  const resolvedFE = FRONTEND_GROUPS.map(g => {
+    const pages = blueprint.pages.filter(p => {
+      if (assignedPages.has(p.id)) return false;
+      return g.filter.pages ? g.filter.pages(p) : false;
+    });
+    pages.forEach(p => assignedPages.add(p.id));
 
-  const resolvedDB = DATABASE_GROUPS.map(g => ({
-    ...g,
-    pages:     [] as PageItem[],
-    endpoints: [] as ApiEndpointItem[],
-    tables:    blueprint.tables.filter(g.filter.tables!),
-    count:     blueprint.tables.filter(g.filter.tables!).length,
-    preview:   blueprint.tables.filter(g.filter.tables!).map(t => t.name),
-  })).filter(g => g.count > 0);
+    return {
+      ...g,
+      pages,
+      endpoints: [] as ApiEndpointItem[],
+      tables: [] as TableItem[],
+      count: pages.length,
+      preview: pages.map(p => p.name),
+    };
+  }).filter(g => g.count > 0);
+
+  // Catch unassigned pages into fallback group
+  const unassignedPages = blueprint.pages.filter(p => !assignedPages.has(p.id));
+  if (unassignedPages.length > 0) {
+    resolvedFE.push({
+      id: 'fg-features',
+      label: 'Feature Modules',
+      description: 'Modul dan halaman fitur utama aplikasi',
+      icon: 'LayoutDashboard',
+      filter: {},
+      pages: unassignedPages,
+      endpoints: [],
+      tables: [],
+      count: unassignedPages.length,
+      preview: unassignedPages.map(p => p.name),
+    });
+  }
+
+  // 2. Resolve Backend Groups
+  const resolvedBE = BACKEND_GROUPS.map(g => {
+    const endpoints = blueprint.apiEndpoints.filter(e => {
+      if (assignedEndpoints.has(e.id)) return false;
+      return g.filter.endpoints ? g.filter.endpoints(e) : false;
+    });
+    endpoints.forEach(e => assignedEndpoints.add(e.id));
+
+    return {
+      ...g,
+      pages: [] as PageItem[],
+      endpoints,
+      tables: [] as TableItem[],
+      count: endpoints.length,
+      preview: endpoints.map(e => e.path),
+    };
+  }).filter(g => g.count > 0);
+
+  // Catch unassigned endpoints into fallback group
+  const unassignedEndpoints = blueprint.apiEndpoints.filter(e => !assignedEndpoints.has(e.id));
+  if (unassignedEndpoints.length > 0) {
+    resolvedBE.push({
+      id: 'bg-core-services',
+      label: 'Core REST APIs',
+      description: 'Endpoint layanan backend dan pengolahan data',
+      icon: 'Sparkles',
+      filter: {},
+      pages: [],
+      endpoints: unassignedEndpoints,
+      tables: [],
+      count: unassignedEndpoints.length,
+      preview: unassignedEndpoints.map(e => `${e.method} ${e.path}`),
+    });
+  }
+
+  // 3. Resolve Database Groups
+  const resolvedDB = DATABASE_GROUPS.map(g => {
+    const tables = blueprint.tables.filter(t => {
+      if (assignedTables.has(t.id)) return false;
+      return g.filter.tables ? g.filter.tables(t) : false;
+    });
+    tables.forEach(t => assignedTables.add(t.id));
+
+    return {
+      ...g,
+      pages: [] as PageItem[],
+      endpoints: [] as ApiEndpointItem[],
+      tables,
+      count: tables.length,
+      preview: tables.map(t => t.name),
+    };
+  }).filter(g => g.count > 0);
+
+  // Catch unassigned tables into fallback group
+  const unassignedTables = blueprint.tables.filter(t => !assignedTables.has(t.id));
+  if (unassignedTables.length > 0) {
+    resolvedDB.push({
+      id: 'dg-entity-tables',
+      label: 'Database Schema',
+      description: 'Tabel database dan relasi entity relational model',
+      icon: 'Database',
+      filter: {},
+      pages: [],
+      endpoints: [],
+      tables: unassignedTables,
+      count: unassignedTables.length,
+      preview: unassignedTables.map(t => t.name),
+    });
+  }
 
   // Y layout
   let yOffset = 0;
@@ -195,26 +277,128 @@ function buildGraph(
 // ============================================================
 // GROUP DETAIL MODAL
 // ============================================================
-function GroupDetailModal({
-  groupId, blueprint, onClose,
-}: { groupId: string | null; blueprint: AppBlueprint; onClose: () => void }) {
+function resolveGroupDef(groupId: string, blueprint: AppBlueprint) {
   if (!groupId) return null;
 
-  const allGroups = [...FRONTEND_GROUPS, ...BACKEND_GROUPS, ...DATABASE_GROUPS];
-  const groupDef = allGroups.find(g => g.id === groupId);
+  const staticGroups = [...FRONTEND_GROUPS, ...BACKEND_GROUPS, ...DATABASE_GROUPS];
+  const staticMatch = staticGroups.find(g => g.id === groupId);
+
+  if (staticMatch) {
+    const pages = staticMatch.filter.pages ? blueprint.pages.filter(staticMatch.filter.pages) : [];
+    const endpoints = staticMatch.filter.endpoints ? blueprint.apiEndpoints.filter(staticMatch.filter.endpoints) : [];
+    const tables = staticMatch.filter.tables ? blueprint.tables.filter(staticMatch.filter.tables) : [];
+    const layerType = groupId.startsWith('fg') ? 'frontend' : groupId.startsWith('bg') ? 'backend' : 'database';
+
+    return {
+      id: staticMatch.id,
+      label: staticMatch.label,
+      description: staticMatch.description,
+      icon: staticMatch.icon,
+      layerType: layerType as 'frontend' | 'backend' | 'database',
+      pages,
+      endpoints,
+      tables,
+    };
+  }
+
+  if (groupId === 'fg-features') {
+    return {
+      id: 'fg-features',
+      label: 'Feature Modules',
+      description: 'Modul dan halaman fitur utama aplikasi',
+      icon: 'LayoutDashboard',
+      layerType: 'frontend' as const,
+      pages: blueprint.pages,
+      endpoints: [],
+      tables: [],
+    };
+  }
+
+  if (groupId === 'bg-core-services') {
+    return {
+      id: 'bg-core-services',
+      label: 'Core REST APIs',
+      description: 'Endpoint layanan backend dan pengolahan data',
+      icon: 'Sparkles',
+      layerType: 'backend' as const,
+      pages: [],
+      endpoints: blueprint.apiEndpoints,
+      tables: [],
+    };
+  }
+
+  if (groupId === 'dg-entity-tables') {
+    return {
+      id: 'dg-entity-tables',
+      label: 'Database Schema',
+      description: 'Tabel database dan relasi entity relational model',
+      icon: 'Database',
+      layerType: 'database' as const,
+      pages: [],
+      endpoints: [],
+      tables: blueprint.tables,
+    };
+  }
+
+  return null;
+}
+
+// ============================================================
+// GROUP DETAIL MODAL (WITH EDIT & DELETE ITEMS)
+// ============================================================
+function GroupDetailModal({
+  groupId, blueprint, onClose, setBlueprint,
+}: {
+  groupId: string | null;
+  blueprint: AppBlueprint;
+  onClose: () => void;
+  setBlueprint: React.Dispatch<React.SetStateAction<AppBlueprint>>;
+}) {
+  if (!groupId) return null;
+
+  const groupDef = resolveGroupDef(groupId, blueprint);
   if (!groupDef) return null;
 
-  const layerType = groupId.startsWith('fg') ? 'frontend' : groupId.startsWith('bg') ? 'backend' : 'database';
-
-  const pages     = groupDef.filter.pages     ? blueprint.pages.filter(groupDef.filter.pages)            : [];
-  const endpoints = groupDef.filter.endpoints ? blueprint.apiEndpoints.filter(groupDef.filter.endpoints) : [];
-  const tables    = groupDef.filter.tables    ? blueprint.tables.filter(groupDef.filter.tables)           : [];
+  const { layerType, pages, endpoints, tables } = groupDef;
+  const [editingItem, setEditingItem] = useState<{ type: 'page' | 'endpoint' | 'table'; item: any } | null>(null);
 
   const colors = {
-    frontend: { header: 'border-violet-700/40 bg-violet-950/20', badge: 'bg-violet-950/60 text-violet-300 border-violet-700/40', dot: 'bg-violet-500', ring: 'border-violet-500/30' },
-    backend:  { header: 'border-sky-700/40 bg-sky-950/20',       badge: 'bg-sky-950/60 text-sky-300 border-sky-700/40',           dot: 'bg-sky-500',     ring: 'border-sky-500/30' },
-    database: { header: 'border-emerald-700/40 bg-emerald-950/20', badge: 'bg-emerald-950/60 text-emerald-300 border-emerald-700/40', dot: 'bg-emerald-500', ring: 'border-emerald-500/30' },
+    frontend: { header: 'border-violet-700/40 bg-violet-950/20', badge: 'bg-violet-950/60 text-violet-300 border-violet-700/40', ring: 'border-violet-500/30' },
+    backend:  { header: 'border-sky-700/40 bg-sky-950/20',       badge: 'bg-sky-950/60 text-sky-300 border-sky-700/40',           ring: 'border-sky-500/30' },
+    database: { header: 'border-emerald-700/40 bg-emerald-950/20', badge: 'bg-emerald-950/60 text-emerald-300 border-emerald-700/40', ring: 'border-emerald-500/30' },
   }[layerType];
+
+  const handleDeleteItem = (itemType: 'page' | 'endpoint' | 'table', id: string) => {
+    setBlueprint(prev => {
+      const next = { ...prev };
+      if (itemType === 'page') {
+        next.pages = next.pages.filter(p => p.id !== id);
+      } else if (itemType === 'endpoint') {
+        next.apiEndpoints = next.apiEndpoints.filter(e => e.id !== id);
+      } else {
+        next.tables = next.tables.filter(t => t.id !== id);
+      }
+      return next;
+    });
+    toast.success("Item berhasil dihapus!");
+  };
+
+  const handleSaveEdit = (edited: any) => {
+    if (!editingItem) return;
+    setBlueprint(prev => {
+      const next = { ...prev };
+      if (editingItem.type === 'page') {
+        next.pages = next.pages.map(p => p.id === edited.id ? edited : p);
+      } else if (editingItem.type === 'endpoint') {
+        next.apiEndpoints = next.apiEndpoints.map(e => e.id === edited.id ? edited : e);
+      } else {
+        next.tables = next.tables.map(t => t.id === edited.id ? edited : t);
+      }
+      return next;
+    });
+    setEditingItem(null);
+    toast.success("Item berhasil diperbarui!");
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -237,13 +421,42 @@ function GroupDetailModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {pages.length === 0 && endpoints.length === 0 && tables.length === 0 && (
+            <div className="text-center py-10 text-slate-500 text-xs">
+              Belum ada item dalam grup ini.
+            </div>
+          )}
+
           {/* Pages */}
           {pages.map(page => {
-            const meta = PAGE_TYPE_META[page.type]; const Icon = meta.icon;
-            const auth = AUTH_LEVEL_META[page.authLevel];
-            const status = STATUS_META[page.status];
+            const meta = PAGE_TYPE_META[page.type] || PAGE_TYPE_META.crud;
+            const Icon = meta.icon;
+            const auth = AUTH_LEVEL_META[page.authLevel] || AUTH_LEVEL_META.protected;
+            const status = STATUS_META[page.status] || STATUS_META.todo;
+            const isEditing = editingItem?.type === 'page' && editingItem.item.id === page.id;
+
+            if (isEditing) {
+              return (
+                <div key={page.id} className="p-4 rounded-xl bg-slate-950 border border-violet-500/40 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-violet-300">Edit Halaman Frontend</span>
+                    <button onClick={() => setEditingItem(null)} className="text-slate-500 hover:text-white"><Lucide.X size={14} /></button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="text" value={editingItem.item.name} onChange={e => setEditingItem(prev => ({ ...prev!, item: { ...prev!.item, name: e.target.value } }))} className="rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-white" placeholder="Nama Halaman" />
+                    <input type="text" value={editingItem.item.route} onChange={e => setEditingItem(prev => ({ ...prev!, item: { ...prev!.item, route: e.target.value } }))} className="rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-white" placeholder="Route / Path" />
+                  </div>
+                  <textarea value={editingItem.item.description} onChange={e => setEditingItem(prev => ({ ...prev!, item: { ...prev!.item, description: e.target.value } }))} rows={2} className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-white resize-none" placeholder="Deskripsi" />
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setEditingItem(null)} className="text-xs">Batal</Button>
+                    <Button size="sm" onClick={() => handleSaveEdit(editingItem.item)} className="text-xs bg-violet-600 hover:bg-violet-500">Simpan Perubahan</Button>
+                  </div>
+                </div>
+              );
+            }
+
             return (
-              <div key={page.id} className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-950/50 border border-slate-800/60 hover:border-slate-700/60 transition">
+              <div key={page.id} className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-950/50 border border-slate-800/60 hover:border-slate-700/60 transition group">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 border border-violet-700/30">
                   <Icon size={15} className={meta.text} />
                 </div>
@@ -253,14 +466,10 @@ function GroupDetailModal({
                     <code className="text-[10px] text-slate-500 font-mono">{page.route}</code>
                   </div>
                   <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">{page.description}</p>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {page.components.slice(0, 5).map(c => <span key={c} className="text-[9px] px-1.5 py-0.5 rounded bg-black/30 border border-white/8 text-slate-500 font-mono">{c}</span>)}
-                    {page.components.length > 5 && <span className="text-[9px] text-slate-600">+{page.components.length - 5}</span>}
-                  </div>
                 </div>
-                <div className="flex flex-col items-end gap-1.5 shrink-0">
-                  <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${status.cls}`}>{status.label}</span>
-                  <span className={`text-[9px] font-bold flex items-center gap-1 ${auth.text}`}><span className={`h-1.5 w-1.5 rounded-full ${auth.dot}`} />{auth.label}</span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button onClick={() => setEditingItem({ type: 'page', item: { ...page } })} className="p-1 rounded text-slate-400 hover:text-violet-300 hover:bg-violet-950/50" title="Edit Halaman"><Lucide.Pencil size={13} /></button>
+                  <button onClick={() => handleDeleteItem('page', page.id)} className="p-1 rounded text-slate-400 hover:text-red-400 hover:bg-red-950/50" title="Hapus Halaman"><Lucide.Trash2 size={13} /></button>
                 </div>
               </div>
             );
@@ -268,7 +477,32 @@ function GroupDetailModal({
 
           {/* Endpoints */}
           {endpoints.map(ep => {
-            const m = METHOD_META[ep.method]; const a = AUTH_LEVEL_META[ep.authLevel];
+            const m = METHOD_META[ep.method] || METHOD_META.GET;
+            const a = AUTH_LEVEL_META[ep.authLevel] || AUTH_LEVEL_META.protected;
+            const isEditing = editingItem?.type === 'endpoint' && editingItem.item.id === ep.id;
+
+            if (isEditing) {
+              return (
+                <div key={ep.id} className="p-4 rounded-xl bg-slate-950 border border-sky-500/40 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-sky-300">Edit API Endpoint</span>
+                    <button onClick={() => setEditingItem(null)} className="text-slate-500 hover:text-white"><Lucide.X size={14} /></button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <select value={editingItem.item.method} onChange={e => setEditingItem(prev => ({ ...prev!, item: { ...prev!.item, method: e.target.value as HttpMethod } }))} className="rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-white">
+                      <option value="GET">GET</option><option value="POST">POST</option><option value="PUT">PUT</option><option value="PATCH">PATCH</option><option value="DELETE">DELETE</option>
+                    </select>
+                    <input type="text" value={editingItem.item.path} onChange={e => setEditingItem(prev => ({ ...prev!, item: { ...prev!.item, path: e.target.value } }))} className="col-span-2 rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-white" placeholder="Path /api/v1/..." />
+                  </div>
+                  <textarea value={editingItem.item.description} onChange={e => setEditingItem(prev => ({ ...prev!, item: { ...prev!.item, description: e.target.value } }))} rows={2} className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-white resize-none" placeholder="Deskripsi API" />
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setEditingItem(null)} className="text-xs">Batal</Button>
+                    <Button size="sm" onClick={() => handleSaveEdit(editingItem.item)} className="text-xs bg-sky-600 hover:bg-sky-500">Simpan Perubahan</Button>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div key={ep.id} className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-950/50 border border-slate-800/60 hover:border-slate-700/60 transition">
                 <span className={`shrink-0 text-[11px] font-black px-2.5 py-1 rounded border ${m.cls} min-w-[52px] text-center`}>{ep.method}</span>
@@ -276,32 +510,59 @@ function GroupDetailModal({
                   <code className="text-[11px] font-bold text-slate-200 break-all">{ep.path}</code>
                   <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">{ep.description}</p>
                 </div>
-                <span className={`shrink-0 text-[9px] font-bold ${a.text} flex items-center gap-1`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${a.dot}`} />{a.label}
-                </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button onClick={() => setEditingItem({ type: 'endpoint', item: { ...ep } })} className="p-1 rounded text-slate-400 hover:text-sky-300 hover:bg-sky-950/50" title="Edit Endpoint"><Lucide.Pencil size={13} /></button>
+                  <button onClick={() => handleDeleteItem('endpoint', ep.id)} className="p-1 rounded text-slate-400 hover:text-red-400 hover:bg-red-950/50" title="Hapus Endpoint"><Lucide.Trash2 size={13} /></button>
+                </div>
               </div>
             );
           })}
 
           {/* Tables */}
-          {tables.map(table => (
-            <div key={table.id} className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-950/50 border border-emerald-950/40 hover:border-emerald-900/40 transition">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-700/30">
-                <Lucide.Table2 size={15} className="text-emerald-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <code className="text-[12px] font-bold text-emerald-300">{table.name}</code>
-                  <span className="text-[9px] text-slate-600">{table.columns.length} kolom</span>
+          {tables.map(table => {
+            const isEditing = editingItem?.type === 'table' && editingItem.item.id === table.id;
+
+            if (isEditing) {
+              return (
+                <div key={table.id} className="p-4 rounded-xl bg-slate-950 border border-emerald-500/40 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-300">Edit Tabel Database</span>
+                    <button onClick={() => setEditingItem(null)} className="text-slate-500 hover:text-white"><Lucide.X size={14} /></button>
+                  </div>
+                  <input type="text" value={editingItem.item.name} onChange={e => setEditingItem(prev => ({ ...prev!, item: { ...prev!.item, name: e.target.value } }))} className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-white" placeholder="Nama Tabel" />
+                  <textarea value={editingItem.item.description} onChange={e => setEditingItem(prev => ({ ...prev!, item: { ...prev!.item, description: e.target.value } }))} rows={2} className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-white resize-none" placeholder="Deskripsi Tabel" />
+                  <input type="text" value={Array.isArray(editingItem.item.columns) ? editingItem.item.columns.join(', ') : editingItem.item.columns} onChange={e => setEditingItem(prev => ({ ...prev!, item: { ...prev!.item, columns: e.target.value.split(',').map((c: string) => c.trim()).filter(Boolean) } }))} className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-white" placeholder="Kolom (pisahkan dengan koma)" />
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setEditingItem(null)} className="text-xs">Batal</Button>
+                    <Button size="sm" onClick={() => handleSaveEdit(editingItem.item)} className="text-xs bg-emerald-600 hover:bg-emerald-500">Simpan Perubahan</Button>
+                  </div>
                 </div>
-                <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">{table.description}</p>
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {table.columns.slice(0, 5).map(c => <span key={c} className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/40 border border-emerald-900/40 text-emerald-400/70 font-mono">{c}</span>)}
-                  {table.columns.length > 5 && <span className="text-[9px] text-slate-600">+{table.columns.length - 5}</span>}
+              );
+            }
+
+            return (
+              <div key={table.id} className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-950/50 border border-emerald-950/40 hover:border-emerald-900/40 transition">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-700/30">
+                  <Lucide.Table2 size={15} className="text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <code className="text-[12px] font-bold text-emerald-300">{table.name}</code>
+                    <span className="text-[9px] text-slate-600">{table.columns.length} kolom</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">{table.description}</p>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {table.columns.slice(0, 5).map((c: string) => <span key={c} className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/40 border border-emerald-900/40 text-emerald-400/70 font-mono">{c}</span>)}
+                    {table.columns.length > 5 && <span className="text-[9px] text-slate-600">+{table.columns.length - 5}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button onClick={() => setEditingItem({ type: 'table', item: { ...table } })} className="p-1 rounded text-slate-400 hover:text-emerald-300 hover:bg-emerald-950/50" title="Edit Tabel"><Lucide.Pencil size={13} /></button>
+                  <button onClick={() => handleDeleteItem('table', table.id)} className="p-1 rounded text-slate-400 hover:text-red-400 hover:bg-red-950/50" title="Hapus Tabel"><Lucide.Trash2 size={13} /></button>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -323,11 +584,10 @@ function AddItemGroupModal({
 }) {
   if (!groupId) return null;
 
-  const allGroups = [...FRONTEND_GROUPS, ...BACKEND_GROUPS, ...DATABASE_GROUPS];
-  const groupDef = allGroups.find(g => g.id === groupId);
+  const groupDef = resolveGroupDef(groupId, blueprint);
   if (!groupDef) return null;
 
-  const layerType = groupId.startsWith('fg') ? 'frontend' : groupId.startsWith('bg') ? 'backend' : 'database';
+  const { layerType } = groupDef;
 
   const [activeTab, setActiveTab] = useState<'ai' | 'manual'>('ai');
   const [aiPrompt, setAiPrompt] = useState('');
@@ -591,6 +851,114 @@ function CanvasPage() {
     setNodes(n); setEdges(e);
   }, [blueprint, projectName, onGroupDetail, onGroupAdd, hasNoBlueprint]);
 
+function parseAiContentToBlueprint(rawContent: string): AppBlueprint | null {
+  if (!rawContent) return null;
+  let content = rawContent.trim();
+  const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) {
+    content = jsonMatch[1].trim();
+  } else {
+    const objectMatch = content.match(/\{[\s\S]*\}/);
+    const arrayMatch = content.match(/\[[\s\S]*\]/);
+    if (objectMatch && (!arrayMatch || objectMatch.index! < arrayMatch.index!)) {
+      content = objectMatch[0];
+    } else if (arrayMatch) {
+      content = arrayMatch[0];
+    }
+  }
+
+  try {
+    const parsed = JSON.parse(content);
+    return normalizeToAppBlueprint(parsed);
+  } catch (err) {
+    console.error("Failed to parse AI content as JSON:", err);
+    return null;
+  }
+}
+
+function normalizeToAppBlueprint(raw: any): AppBlueprint {
+  if (!raw) return FALLBACK_BLUEPRINT;
+
+  // Case 1: Raw is already AppBlueprint with pages
+  if (raw.pages && Array.isArray(raw.pages) && raw.pages.length > 0) {
+    return {
+      pages: raw.pages,
+      apiEndpoints: raw.apiEndpoints || [],
+      tables: raw.tables || [],
+    };
+  }
+
+  // Case 2: Raw is features array or { features: [...] }
+  const featuresList: any[] = Array.isArray(raw)
+    ? raw
+    : Array.isArray(raw.features)
+    ? raw.features
+    : [];
+
+  if (featuresList.length > 0) {
+    const pages: PageItem[] = [];
+    const apiEndpoints: ApiEndpointItem[] = [];
+    const tables: TableItem[] = [];
+
+    featuresList.forEach((feat, idx) => {
+      const slug = String(feat.name || `feature-${idx + 1}`)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-");
+
+      pages.push({
+        id: `p-${idx + 1}`,
+        name: feat.name || `Fitur ${idx + 1}`,
+        route: `/app/${slug}`,
+        type: idx === 0 ? "dashboard" : feat.name.toLowerCase().includes("login") ? "auth" : "settings",
+        description: feat.phase || feat.name || "Modul fitur utama aplikasi",
+        components: Array.isArray(feat.subs) ? feat.subs : [feat.name],
+        authLevel: idx < 2 ? "public" : "protected",
+        status: "todo",
+      });
+
+      apiEndpoints.push({
+        id: `a-${idx + 1}-list`,
+        method: "GET",
+        path: `/api/v1/${slug}`,
+        description: `Mengambil daftar data ${feat.name}`,
+        authLevel: "protected",
+      });
+
+      apiEndpoints.push({
+        id: `a-${idx + 1}-create`,
+        method: "POST",
+        path: `/api/v1/${slug}`,
+        description: `Membuat data ${feat.name} baru`,
+        authLevel: "protected",
+      });
+
+      if (Array.isArray(feat.sqlSchema) && feat.sqlSchema.length > 0) {
+        feat.sqlSchema.forEach((sql: string, tableIdx: number) => {
+          const tableNameMatch = sql.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-zA-Z0-9_]+)/i);
+          const tableName = tableNameMatch ? tableNameMatch[1] : `${slug.replace(/-/g, '_')}_tbl`;
+          tables.push({
+            id: `t-${idx + 1}-${tableIdx + 1}`,
+            name: tableName,
+            description: `Tabel database untuk ${feat.name}`,
+            columns: ["id uuid PK", "created_at timestamptz", "updated_at timestamptz"],
+          });
+        });
+      } else {
+        tables.push({
+          id: `t-${idx + 1}`,
+          name: slug.replace(/-/g, "_"),
+          description: `Tabel database untuk ${feat.name}`,
+          columns: ["id uuid PK", "created_at timestamptz", "updated_at timestamptz"],
+        });
+      }
+    });
+
+    return { pages, apiEndpoints, tables };
+  }
+
+  return FALLBACK_BLUEPRINT;
+}
+
   useEffect(() => {
     async function load() {
       const projectId = localStorage.getItem("active_project_id");
@@ -604,8 +972,10 @@ function CanvasPage() {
         if (local) {
           try {
             const parsed = JSON.parse(local);
-            if (parsed && parsed.pages) {
-              setBlueprint(parsed);
+            const normalized = normalizeToAppBlueprint(parsed);
+            if (normalized && normalized.pages && normalized.pages.length > 0) {
+              setBlueprint(normalized);
+              setHasNoBlueprint(false);
               setLoading(false);
               return;
             }
@@ -614,11 +984,16 @@ function CanvasPage() {
 
         // 2. Coba load dari DB
         const canvas = await api.projects.getCanvas(projectId);
-        if (canvas?.features?.pages) {
-          setBlueprint(canvas.features);
-          localStorage.setItem(`canvas_blueprint_${projectId}`, JSON.stringify(canvas.features));
+        if (canvas?.features) {
+          const normalized = normalizeToAppBlueprint(canvas.features);
+          if (normalized && normalized.pages && normalized.pages.length > 0) {
+            setBlueprint(normalized);
+            localStorage.setItem(`canvas_blueprint_${projectId}`, JSON.stringify(normalized));
+            setHasNoBlueprint(false);
+          } else {
+            setHasNoBlueprint(true);
+          }
         } else {
-          // Tampilkan opsi generate, jangan otomatis generate di database/API
           setHasNoBlueprint(true);
         }
       } catch {
@@ -637,7 +1012,6 @@ function CanvasPage() {
     if (!projectId) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      // Simpan di local storage dulu
       localStorage.setItem(`canvas_blueprint_${projectId}`, JSON.stringify(blueprint));
     }, 1200);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
@@ -651,16 +1025,19 @@ function CanvasPage() {
       const provider = localStorage.getItem("active_provider") ?? undefined;
       const gen = await api.generate.canvas(projectId, { provider });
       if (gen?.content) {
-        const parsed: AppBlueprint = JSON.parse(gen.content.replace(/```json/g, '').replace(/```/g, '').trim());
-        if (parsed.pages) {
-          setBlueprint(parsed);
-          localStorage.setItem(`canvas_blueprint_${projectId}`, JSON.stringify(parsed));
+        const normalized = parseAiContentToBlueprint(gen.content);
+        if (normalized && normalized.pages && normalized.pages.length > 0) {
+          setBlueprint(normalized);
+          localStorage.setItem(`canvas_blueprint_${projectId}`, JSON.stringify(normalized));
           setHasNoBlueprint(false);
           toast.success("Blueprint berhasil digenerate oleh AI!");
+        } else {
+          toast.error("Gagal memproses format blueprint AI");
         }
       }
-    } catch {
-      toast.error("Gagal generate blueprint");
+    } catch (err: any) {
+      console.error("Generate canvas error:", err);
+      toast.error(err?.message || "Gagal generate blueprint");
     } finally {
       setGeneratingInitial(false);
     }
@@ -696,10 +1073,10 @@ function CanvasPage() {
       const provider = localStorage.getItem("active_provider") ?? undefined;
       const gen = await api.generate.canvas(projectId, { provider, revision: revisionText });
       if (gen?.content) {
-        const parsed: AppBlueprint = JSON.parse(gen.content.replace(/```json/g, '').replace(/```/g, '').trim());
-        if (parsed.pages) {
-          setBlueprint(parsed);
-          localStorage.setItem(`canvas_blueprint_${projectId}`, JSON.stringify(parsed));
+        const normalized = parseAiContentToBlueprint(gen.content);
+        if (normalized && normalized.pages && normalized.pages.length > 0) {
+          setBlueprint(normalized);
+          localStorage.setItem(`canvas_blueprint_${projectId}`, JSON.stringify(normalized));
           toast.success("Blueprint berhasil direvisi!");
           setShowRevision(false);
           setRevisionText('');
@@ -732,9 +1109,9 @@ function CanvasPage() {
       const provider = localStorage.getItem("active_provider") ?? undefined;
       const gen = await api.generate.canvas(projectId, { provider, revision: instructionPrompt });
       if (gen?.content) {
-        const parsed: AppBlueprint = JSON.parse(gen.content.replace(/```json/g, '').replace(/```/g, '').trim());
-        if (parsed.pages) {
-          setBlueprint(parsed);
+        const normalized = parseAiContentToBlueprint(gen.content);
+        if (normalized && normalized.pages && normalized.pages.length > 0) {
+          setBlueprint(normalized);
           toast.success("AI berhasil menambahkan item ke blueprint!");
         } else {
           toast.error("Respons AI tidak valid");
@@ -871,7 +1248,7 @@ function CanvasPage() {
         </div>
       )}
 
-      <GroupDetailModal groupId={detailGroupId} blueprint={blueprint} onClose={() => setDetailGroupId(null)} />
+      <GroupDetailModal groupId={detailGroupId} blueprint={blueprint} onClose={() => setDetailGroupId(null)} setBlueprint={setBlueprint} />
       <AddItemGroupModal
         groupId={addGroupId}
         blueprint={blueprint}

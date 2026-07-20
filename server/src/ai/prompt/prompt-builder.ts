@@ -45,7 +45,7 @@ export class PromptBuilder {
       developerPrompt: template.developerPrompt ?? undefined,
       userPrompt,
       config: {
-        model: template.model ?? 'gemini-2.5-flash',
+        model: template.model ?? 'gemini-3.1-flash-lite-preview',
         temperature: Number(template.temperature ?? 0.7),
         maxTokens: generateType === 'canvas' || generateType === 'prompt' ? 32768 : generateType === 'prd' ? 16384 : (template.maxTokens ?? 8192),
         topP: Number(template.topP ?? 0.9),
@@ -100,7 +100,7 @@ Format JSON yang Diharapkan:
       systemPrompt: systemPrompts[generateType] ?? systemPrompts.prd,
       userPrompt,
       config: {
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.1-flash-lite-preview',
         temperature: 0.7,
         maxTokens: generateType === 'canvas' || generateType === 'prompt' ? 32768 : generateType === 'prd' ? 16384 : 8192,
         topP: 0.9,

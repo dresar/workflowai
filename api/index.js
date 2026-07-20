@@ -223,7 +223,7 @@ var users = pgTable("users", {
   passwordHash: varchar("password_hash", { length: 255 }),
   role: userRoleEnum("role").notNull().default("user"),
   isActive: boolean("is_active").notNull().default(true),
-  promptTokens: integer("prompt_tokens").notNull().default(5),
+  promptTokens: integer("prompt_tokens").notNull().default(100),
   lastLoginAt: timestamp2("last_login_at", { withTimezone: true }),
   createdAt: timestamp2("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp2("updated_at", { withTimezone: true }).notNull().defaultNow()
@@ -237,6 +237,7 @@ var technologies = pgTable2("technologies", {
   category: varchar2("category", { length: 100 }).notNull(),
   version: varchar2("version", { length: 50 }),
   description: text("description"),
+  iconUrl: text("icon_url"),
   isActive: boolean2("is_active").notNull().default(true),
   sortOrder: integer2("sort_order").notNull().default(0),
   createdAt: timestamp3("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -775,12 +776,21 @@ function encrypt(plaintext) {
   return `${iv.toString("hex")}:${encrypted.toString("hex")}`;
 }
 function decrypt(ciphertext) {
-  const [ivHex, encryptedHex] = ciphertext.split(":");
-  if (!ivHex || !encryptedHex) throw new Error("Invalid encrypted value format");
-  const iv = Buffer.from(ivHex, "hex");
-  const encrypted = Buffer.from(encryptedHex, "hex");
-  const decipher = crypto2.createDecipheriv(ALGORITHM, getKey(), iv);
-  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+  if (!ciphertext) return "";
+  if (!ciphertext.includes(":")) {
+    return ciphertext;
+  }
+  try {
+    const [ivHex, encryptedHex] = ciphertext.split(":");
+    if (!ivHex || !encryptedHex) return ciphertext;
+    const iv = Buffer.from(ivHex, "hex");
+    const encrypted = Buffer.from(encryptedHex, "hex");
+    const decipher = crypto2.createDecipheriv(ALGORITHM, getKey(), iv);
+    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+    return decrypted;
+  } catch (err) {
+    return ciphertext;
+  }
 }
 function maskKey(key) {
   if (key.length <= 8) return "****";
@@ -825,7 +835,7 @@ var RotationEngine = class {
       ).orderBy(asc(apiKeys.priority));
       const availableKeys = keys.filter((k) => !this.triedKeyIds.has(k.id));
       if (availableKeys.length === 0) {
-        logRotation({ providerId: provider.id }, `No available keys for provider ${provider.name}`);
+        logRotation({ providerId: provider.id }, `No uncooled keys for provider ${provider.name}, rotating to next provider`);
         this.triedProviderIds.add(provider.id);
         continue;
       }
@@ -836,6 +846,9 @@ var RotationEngine = class {
         decryptedKey = decrypt(selectedKey.keyEncrypted);
       } catch {
         logError({}, `Failed to decrypt key ${selectedKey.id}`);
+        continue;
+      }
+      if (!decryptedKey) {
         continue;
       }
       this.addEvent({
@@ -858,9 +871,55 @@ var RotationEngine = class {
         maxRetries: provider.maxRetries
       };
     }
+    const envGemini = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY;
+    if (envGemini) {
+      const firstKey = envGemini.split(",")[0].trim();
+      if (firstKey && !this.triedKeyIds.has("env-gemini-fallback")) {
+        this.triedKeyIds.add("env-gemini-fallback");
+        return {
+          id: "env-gemini-fallback",
+          apiKey: firstKey,
+          providerId: "env-provider",
+          providerName: "gemini",
+          model: "gemini-3.1-flash-lite-preview",
+          timeoutMs: 6e4,
+          maxRetries: 3
+        };
+      }
+    }
+    const envGroq = process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY;
+    if (envGroq) {
+      const firstKey = envGroq.split(",")[0].trim();
+      if (firstKey && !this.triedKeyIds.has("env-groq-fallback")) {
+        this.triedKeyIds.add("env-groq-fallback");
+        return {
+          id: "env-groq-fallback",
+          apiKey: firstKey,
+          providerId: "env-provider",
+          providerName: "groq",
+          model: "llama-3.3-70b-versatile",
+          timeoutMs: 3e4,
+          maxRetries: 3
+        };
+      }
+    }
     throw new AllProvidersExhaustedError();
   }
-  async markKeyFailed(keyId, cooldownMinutes) {
+  async markKeyFailed(keyId, cooldownMinutes, isPermanent = false) {
+    if (keyId.startsWith("env-")) {
+      this.addEvent({ type: "cooldown", apiKeyId: keyId, reason: "Env fallback key failed" });
+      return;
+    }
+    if (isPermanent) {
+      await db.update(apiKeys).set({
+        isActive: false,
+        failedRequests: db.$count(apiKeys, eq2(apiKeys.id, keyId)),
+        updatedAt: /* @__PURE__ */ new Date()
+      }).where(eq2(apiKeys.id, keyId));
+      this.addEvent({ type: "cooldown", apiKeyId: keyId, reason: "Permanently deactivated (invalid API key)" });
+      logRotation({ keyId }, "Key permanently deactivated (invalid API key)");
+      return;
+    }
     const cooldownUntil = new Date(Date.now() + cooldownMinutes * 60 * 1e3);
     await db.update(apiKeys).set({
       failedRequests: db.$count(apiKeys, eq2(apiKeys.id, keyId)),
@@ -871,6 +930,9 @@ var RotationEngine = class {
     logRotation({ keyId, cooldownUntil }, "Key marked as cooling down");
   }
   async markKeySuccess(keyId) {
+    if (keyId.startsWith("env-")) {
+      return;
+    }
     await db.update(apiKeys).set({
       totalRequests: db.$count(apiKeys, eq2(apiKeys.id, keyId)),
       lastUsedAt: /* @__PURE__ */ new Date(),
@@ -970,7 +1032,7 @@ Your output was cut off because you reached the maximum token limit. PLEASE CONT
   async validateKey(apiKey) {
     try {
       const client = new GoogleGenerativeAI(apiKey);
-      const model = client.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const model = client.getGenerativeModel({ model: "gemini-3.1-flash-lite-preview" });
       await model.generateContent("test");
       return true;
     } catch {
@@ -1381,18 +1443,16 @@ async function saveDocumentManual(req, res, next) {
 }
 
 // server/src/modules/technology/technology.repository.ts
-import { eq as eq3, asc as asc2, sql as sql3 } from "drizzle-orm";
+import { and as and3, eq as eq3, like, asc as asc2, sql as sql3 } from "drizzle-orm";
 var TechnologyRepository = class {
   async findAll(params) {
     const { page, limit, category, search, activeOnly } = params;
     const offset = calcOffset(page, limit);
-    const where = sql3`TRUE`;
     const conditions = [];
     if (activeOnly) conditions.push(eq3(technologies.isActive, true));
     if (category && category !== "all") conditions.push(eq3(technologies.category, category));
-    const query = db.select().from(technologies).where(
-      conditions.length > 0 ? sql3`${conditions.reduce((acc, c) => sql3`${acc} AND ${c}`, sql3`TRUE`)}` : void 0
-    ).orderBy(asc2(technologies.sortOrder), asc2(technologies.name)).limit(limit).offset(offset);
+    if (search && search.trim()) conditions.push(like(technologies.name, `%${search.trim()}%`));
+    const query = db.select().from(technologies).where(conditions.length > 0 ? and3(...conditions) : void 0).orderBy(asc2(technologies.sortOrder), asc2(technologies.name)).limit(limit).offset(offset);
     const countQuery = db.select({ count: sql3`count(*)` }).from(technologies);
     const [items, [{ count }]] = await Promise.all([query, countQuery]);
     return { items, total: Number(count) };
@@ -1560,6 +1620,8 @@ async function getActiveQuestions(req, res, next) {
           const selectedKey = await rotationEngine.selectKey();
           const provider = getProvider(selectedKey.providerName);
           if (provider) {
+            const selectedTechs = await db.select().from(projectTechnologies).where(eq4(projectTechnologies.projectId, projectId));
+            const techSummary = selectedTechs.map((t) => `${t.category}: ${t.technologyName}`).join(", ");
             const languageLabel = project.language === "id" ? "Indonesian" : "English";
             const systemPrompt = `You are an expert Requirements Engineer. Your job is to generate exactly 5 custom, highly relevant, and contextual clarifying questions to deeply understand the requirements and details of the user's software idea.
 
@@ -1575,16 +1637,17 @@ Array<{
 Constraints:
 1. You MUST generate exactly 5 questions.
 2. The language of the questions AND options MUST match the user's preferred language: ${languageLabel}.
-3. All questions, options, and descriptions MUST be 100% relevant and specific to the user's project idea. Do NOT use generic or unrelated examples. Tailor every option and question strictly to the project context provided.
+3. All questions, options, and descriptions MUST be 100% relevant and specific to the user's project idea AND tech stack. Do NOT use generic or unrelated examples. Tailor every option and question strictly to the project context provided.
 4. Use natural, conversational language appropriate to the project domain. Questions should feel like a professional discovery session, not a survey.
 5. The 'options' field must contain real, contextual choices that are directly relevant to the specific software idea described. Never include options from a different domain.
 6. The 'desc' field must be a short, helpful guide or recommendation on how the user should answer this specific question. Keep it brief and encouraging.
 7. Do NOT output markdown ticks or code block wrapper. Output ONLY the raw valid JSON array. No text before or after.
 8. Ensure the JSON is complete and valid \u2014 do not truncate or leave any field unfinished.`;
-            const userPrompt = `Project Idea: ${project.idea}
-Language: ${languageLabel}
+            const userPrompt = `Project Idea / Ide Aplikasi: ${project.idea}
+Tech Stack / Teknologi Pilihan: ${techSummary || "Otomatis oleh AI"}
+Bahasa: ${languageLabel}
 
-Generate 5 highly specific questions tailored exactly to this project idea.`;
+Hasilkan 5 pertanyaan yang SANGAT SPESIFIK dan RELEVAN dengan ide aplikasi serta tech stack di atas.`;
             const result = await provider.generate({
               systemPrompt,
               userPrompt,
@@ -1728,7 +1791,7 @@ var app_routes_default = router;
 import { Router as Router2 } from "express";
 
 // server/src/ai/context/context-builder.ts
-import { eq as eq6, and as and3, desc as desc2 } from "drizzle-orm";
+import { eq as eq6, and as and4, desc as desc2 } from "drizzle-orm";
 var ContextBuilder = class {
   async build(projectId, generateType) {
     const [project] = await db.select().from(projects).where(eq6(projects.id, projectId)).limit(1);
@@ -1748,7 +1811,7 @@ var ContextBuilder = class {
       }).from(interviewAnswers).leftJoin(interviewQuestions, eq6(interviewAnswers.questionId, interviewQuestions.id)).where(eq6(interviewAnswers.projectId, projectId)),
       db.select().from(canvasStructures).where(eq6(canvasStructures.projectId, projectId)).limit(1),
       db.select().from(generatedDocuments).where(
-        and3(eq6(generatedDocuments.projectId, projectId), eq6(generatedDocuments.isCurrent, true))
+        and4(eq6(generatedDocuments.projectId, projectId), eq6(generatedDocuments.isCurrent, true))
       )
     ]);
     let parsedAnswers = [];
@@ -1877,14 +1940,14 @@ var ContextBuilder = class {
 };
 
 // server/src/ai/prompt/prompt-builder.ts
-import { eq as eq7, and as and4 } from "drizzle-orm";
+import { eq as eq7, and as and5 } from "drizzle-orm";
 var PromptBuilder = class {
   constructor() {
     this.contextBuilder = new ContextBuilder();
   }
   async build(generateType, context) {
     const [template] = await db.select().from(promptTemplates).where(
-      and4(
+      and5(
         eq7(promptTemplates.generateType, generateType),
         eq7(promptTemplates.isActive, true),
         eq7(promptTemplates.isDefault, true)
@@ -1910,7 +1973,7 @@ var PromptBuilder = class {
       developerPrompt: template.developerPrompt ?? void 0,
       userPrompt,
       config: {
-        model: template.model ?? "gemini-2.5-flash",
+        model: template.model ?? "gemini-3.1-flash-lite-preview",
         temperature: Number(template.temperature ?? 0.7),
         maxTokens: generateType === "canvas" || generateType === "prompt" ? 32768 : generateType === "prd" ? 16384 : template.maxTokens ?? 8192,
         topP: Number(template.topP ?? 0.9)
@@ -1991,7 +2054,7 @@ ${contextText}`;
       systemPrompt: systemPrompts[generateType] ?? systemPrompts.prd,
       userPrompt,
       config: {
-        model: "gemini-2.5-flash",
+        model: "gemini-3.1-flash-lite-preview",
         temperature: 0.7,
         maxTokens: generateType === "canvas" || generateType === "prompt" ? 32768 : generateType === "prd" ? 16384 : 8192,
         topP: 0.9
@@ -2138,7 +2201,7 @@ ${prompt.userPrompt}`;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       let selectedKey;
       try {
-        selectedKey = await rotationEngine.selectKey(preferredProvider);
+        selectedKey = await rotationEngine.selectKey(attempt === 0 ? preferredProvider : void 0);
       } catch (err) {
         if (err instanceof AllProvidersExhaustedError) {
           logError({ projectId, generateType }, "All providers exhausted", err);
@@ -2205,7 +2268,8 @@ ${prompt.userPrompt}`;
           attempts: (existingMemory?.attempts ?? 0) + attempt,
           contextSummary: err instanceof Error ? err.message : "Unknown error"
         });
-        await rotationEngine.markKeyFailed(selectedKey.id, cooldownMinutes);
+        const isInvalidKey = err instanceof Error && (err.message.includes("API_KEY_INVALID") || err.message.includes("API key not valid") || err.message.includes("invalid_api_key"));
+        await rotationEngine.markKeyFailed(selectedKey.id, cooldownMinutes, isInvalidKey);
         await this.saveRequestLog(projectId, generateType, selectedKey.id, null, false, rotationEngine.getEvents(), err);
       }
     }
@@ -3141,7 +3205,7 @@ async function createUser(req, res, next) {
       role: role || "user",
       isActive: isActive !== void 0 ? isActive : true,
       passwordHash: password || "default-password-hash",
-      promptTokens: promptTokens !== void 0 ? parseInt(promptTokens, 10) : 5
+      promptTokens: promptTokens !== void 0 ? parseInt(promptTokens, 10) : 100
     }).returning();
     sendCreated(res, item);
   } catch (err) {

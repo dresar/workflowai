@@ -1,5 +1,5 @@
 import { db } from '../../../database/connection';
-import { interviewQuestions, projects } from '../../../database/schema';
+import { interviewQuestions, projects, projectTechnologies } from '../../../database/schema';
 import { eq, asc } from 'drizzle-orm';
 import type { Request, Response, NextFunction } from 'express';
 import { sendSuccess } from '../../../shared/utils/response.util';
@@ -18,7 +18,10 @@ export async function getActiveQuestions(req: Request, res: Response, next: Next
           const provider = getProvider(selectedKey.providerName);
           
           if (provider) {
+            const selectedTechs = await db.select().from(projectTechnologies).where(eq(projectTechnologies.projectId, projectId));
+            const techSummary = selectedTechs.map((t) => `${t.category}: ${t.technologyName}`).join(', ');
             const languageLabel = project.language === 'id' ? 'Indonesian' : 'English';
+
             const systemPrompt = `You are an expert Requirements Engineer. Your job is to generate exactly 5 custom, highly relevant, and contextual clarifying questions to deeply understand the requirements and details of the user's software idea.
 
 Return ONLY a raw JSON array matching this typescript signature, without markdown code blocks:
@@ -33,14 +36,14 @@ Array<{
 Constraints:
 1. You MUST generate exactly 5 questions.
 2. The language of the questions AND options MUST match the user's preferred language: ${languageLabel}.
-3. All questions, options, and descriptions MUST be 100% relevant and specific to the user's project idea. Do NOT use generic or unrelated examples. Tailor every option and question strictly to the project context provided.
+3. All questions, options, and descriptions MUST be 100% relevant and specific to the user's project idea AND tech stack. Do NOT use generic or unrelated examples. Tailor every option and question strictly to the project context provided.
 4. Use natural, conversational language appropriate to the project domain. Questions should feel like a professional discovery session, not a survey.
 5. The 'options' field must contain real, contextual choices that are directly relevant to the specific software idea described. Never include options from a different domain.
 6. The 'desc' field must be a short, helpful guide or recommendation on how the user should answer this specific question. Keep it brief and encouraging.
 7. Do NOT output markdown ticks or code block wrapper. Output ONLY the raw valid JSON array. No text before or after.
 8. Ensure the JSON is complete and valid — do not truncate or leave any field unfinished.`;
 
-            const userPrompt = `Project Idea: ${project.idea}\nLanguage: ${languageLabel}\n\nGenerate 5 highly specific questions tailored exactly to this project idea.`;
+            const userPrompt = `Project Idea / Ide Aplikasi: ${project.idea}\nTech Stack / Teknologi Pilihan: ${techSummary || 'Otomatis oleh AI'}\nBahasa: ${languageLabel}\n\nHasilkan 5 pertanyaan yang SANGAT SPESIFIK dan RELEVAN dengan ide aplikasi serta tech stack di atas.`;
             
             const result = await provider.generate({
               systemPrompt,

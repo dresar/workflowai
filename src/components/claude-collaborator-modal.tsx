@@ -71,11 +71,17 @@ export function ClaudeCollaboratorModal({
         api.admin.promptTemplates.getByType(documentType).catch(() => []),
       ]);
 
-      // Normalisasi format canvasFeatures
+      // Normalisasi format canvasFeatures (Lengkap dengan SQL Schema & Tasks)
       let canvasFeaturesFormatted = "";
       if (canvas && canvas.features) {
         if (Array.isArray(canvas.features)) {
-          canvasFeaturesFormatted = canvas.features.map((f: any) => `- ${f.name} [Phase: ${f.phase}]: ${f.subs?.join(", ") || ""}`).join("\n");
+          canvasFeaturesFormatted = canvas.features.map((f: any) => {
+            let res = `- Fitur: ${f.name} (${f.phase || 'Fase 1'})\n`;
+            if (f.subs && f.subs.length > 0) res += `  * Sub-Fitur: ${f.subs.join(", ")}\n`;
+            if (f.sqlSchema && f.sqlSchema.length > 0) res += `  * Skema SQL: ${f.sqlSchema.join("; ")}\n`;
+            if (f.tasks && f.tasks.length > 0) res += `  * Tasks: ${f.tasks.join("; ")}\n`;
+            return res;
+          }).join("\n");
         } else if (typeof canvas.features === 'object') {
           const blueprint = canvas.features as any;
           if (Array.isArray(blueprint.pages)) {
@@ -91,6 +97,9 @@ export function ClaudeCollaboratorModal({
       }
 
       const docs: Record<string, string> = {};
+      if (canvas && canvas.features) {
+        docs["CANVAS BLUEPRINT (STRUKTUR FITUR, SQL, & TASKS)"] = typeof canvas.features === "string" ? canvas.features : JSON.stringify(canvas.features, null, 2);
+      }
       if (Array.isArray(docsResult)) {
         docsResult.forEach((d: any) => {
           // Jangan sertakan dokumen yang tipenya sama dengan yang sedang di-generate

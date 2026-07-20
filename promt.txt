@@ -1,0 +1,712 @@
+Anda adalah seorang Principal Software Architect dan AI Coding Assistant tingkat lanjut.
+Tugas Anda adalah menghasilkan dokumen PROMPT yang sangat terperinci dan profesional untuk proyek perangkat lunak baru.
+
+<project_context>
+Nama Proyek: Project 7/20/2026
+Ide Utama: Saya ingin membangun website  untuk biolink dan ada admin panels untuk menambahkan crud nya ada produk di bawah nya grid 2 utama mobile ya 
+
+Bahasa Output: Bahasa Indonesia
+Deskripsi Tambahan: [{"questionId":"fallback-1","question":"Ceritakan masalah utama yang ingin diselesaikan aplikasi ini. Siapa yang paling merasakan masalah itu?","answer":"enggambarkan user persona dan pain point utama aplikasi"},{"questionId":"fallback-2","question":"Apa satu aksi utama yang harus bisa dilakukan pengguna saat pertama kali membuka aplikasi ini?","answer":"enentukan core value proposition dan first impression aplikasi"},{"questionId":"fallback-3","question":"Fitur-fitur apa yang wajib ada di versi pertama aplikasi ini?","answer":["Autentikasi & manajemen akun","Notifikasi real-time","Pencarian & filter data","Dashboard & laporan","Chat / komunikasi","API publik / integrasi pihak ketiga","Export data (PDF/Excel)"]},{"questionId":"fallback-4","question":"Siapa saja tipe pengguna yang akan mengakses aplikasi ini?","answer":["End user / pelanggan","Admin / operator","Mitra / vendor eksternal"]},{"questionId":"fallback-5","question":"Platform apa yang menjadi target utama aplikasi ini?","answer":"Web browser (desktop)"}]
+</project_context>
+
+<tech_stack>
+
+</tech_stack>
+
+<interview_context>
+T: Ceritakan masalah utama yang ingin diselesaikan aplikasi ini. Siapa yang paling merasakan masalah itu?
+J: "enggambarkan user persona dan pain point utama aplikasi"
+
+T: Apa satu aksi utama yang harus bisa dilakukan pengguna saat pertama kali membuka aplikasi ini?
+J: "enentukan core value proposition dan first impression aplikasi"
+
+T: Fitur-fitur apa yang wajib ada di versi pertama aplikasi ini?
+J: ["Autentikasi & manajemen akun","Notifikasi real-time","Pencarian & filter data","Dashboard & laporan","Chat / komunikasi","API publik / integrasi pihak ketiga","Export data (PDF/Excel)"]
+
+T: Siapa saja tipe pengguna yang akan mengakses aplikasi ini?
+J: ["End user / pelanggan","Admin / operator","Mitra / vendor eksternal"]
+
+T: Platform apa yang menjadi target utama aplikasi ini?
+J: "Web browser (desktop)"
+</interview_context>
+
+<features_and_specifications>
+Frontend Pages:
+- Manajemen Profil Biolink (/app/manajemen-profil-biolink) - Fase 1
+- Sistem Link & Konten (/app/sistem-link-konten) - Fase 1
+- Manajemen Produk Grid (/app/manajemen-produk-grid) - Fase 2
+- Autentikasi Admin (/app/autentikasi-admin) - Fase 2
+- Dashboard Analitik (/app/dashboard-analitik) - Fase 3
+- Kustomisasi Tema & UI (/app/kustomisasi-tema-ui) - Fase 3
+Backend API Endpoints:
+- GET /api/v1/manajemen-profil-biolink - Mengambil daftar data Manajemen Profil Biolink
+- POST /api/v1/manajemen-profil-biolink - Membuat data Manajemen Profil Biolink baru
+- GET /api/v1/sistem-link-konten - Mengambil daftar data Sistem Link & Konten
+- POST /api/v1/sistem-link-konten - Membuat data Sistem Link & Konten baru
+- GET /api/v1/manajemen-produk-grid - Mengambil daftar data Manajemen Produk Grid
+- POST /api/v1/manajemen-produk-grid - Membuat data Manajemen Produk Grid baru
+- GET /api/v1/autentikasi-admin - Mengambil daftar data Autentikasi Admin
+- POST /api/v1/autentikasi-admin - Membuat data Autentikasi Admin baru
+- GET /api/v1/dashboard-analitik - Mengambil daftar data Dashboard Analitik
+- POST /api/v1/dashboard-analitik - Membuat data Dashboard Analitik baru
+- GET /api/v1/kustomisasi-tema-ui - Mengambil daftar data Kustomisasi Tema & UI
+- POST /api/v1/kustomisasi-tema-ui - Membuat data Kustomisasi Tema & UI baru
+Database Tables:
+- profiles (id uuid PK, created_at timestamptz, updated_at timestamptz) - Tabel database untuk Manajemen Profil Biolink
+- links (id uuid PK, created_at timestamptz, updated_at timestamptz) - Tabel database untuk Sistem Link & Konten
+- products (id uuid PK, created_at timestamptz, updated_at timestamptz) - Tabel database untuk Manajemen Produk Grid
+- admins (id uuid PK, created_at timestamptz, updated_at timestamptz) - Tabel database untuk Autentikasi Admin
+- analytics (id uuid PK, created_at timestamptz, updated_at timestamptz) - Tabel database untuk Dashboard Analitik
+- themes (id uuid PK, created_at timestamptz, updated_at timestamptz) - Tabel database untuk Kustomisasi Tema & UI
+
+</features_and_specifications>
+
+<existing_documents>
+[Dokumen PRD]
+```markdown
+# Product Requirement Document (PRD) - Project 7/20/2026
+**Biolink Platform dengan Admin Panel & Grid Produk Mobile-First**
+
+---
+
+## 1. Executive Summary
+Project 7/20/2026 adalah platform **Biolink** yang memungkinkan pengguna (content creator, UMKM, affiliate marketer) membuat halaman profil publik yang terintegrasi dengan kumpulan tautan (link) dan katalog produk dalam tampilan grid 2 kolom yang dioptimalkan untuk perangkat seluler. Platform ini dilengkapi dengan **Admin Panel** untuk mengelola seluruh konten secara mandiri (CRUD), melihat analitik performa tautan dan produk, serta melakukan kustomisasi tema tanpa menulis kode.
+
+Dibangun menggunakan arsitektur modern **Next.js 14 (App Router)**, **Supabase** (PostgreSQL, Auth, Storage, Realtime), dan **Tailwind CSS + Shadcn/UI**, proyek ini mengedepankan **mobile-first experience**, keamanan tingkat lanjut dengan Row Level Security (RLS), dan API publik yang siap diintegrasikan oleh pihak ketiga.
+
+---
+
+## 2. Problem Statement & Solution
+### 2.1 Problem Statement
+- **Pain Point:** Individu dan pelaku bisnis kecil kesulitan menyatukan semua tautan penting (sosial media, toko online, artikel) dan menampilkan produk andalan dalam satu halaman sederhana. Mereka seringkali harus bergantung pada platform pihak ketiga yang rigid atau memerlukan keahlian coding untuk membuat landing page sendiri.
+- **User Persona Utama:** 
+  - *Alya, 27 tahun*, seorang food blogger dengan 50rb pengikut Instagram. Ia ingin satu tautan di bio yang merangkum resep terbaru, link affiliate, dan produk merchandise.
+  - *Bayu, 33 tahun*, pemilik toko kopi kecil yang ingin memajang 6 produk unggulan, link pemesanan, dan kontak WhatsApp dalam satu halaman yang cepat diakses pelanggan.
+- **Kesulitan Tanpa Aplikasi Ini:** Menghabiskan waktu untuk coding sederhana, tidak ada analitik terpusat, dan tampilan yang tidak profesional di perangkat seluler.
+
+### 2.2 Solution
+- **Biolink Page** dinamis dengan username unik (`/namauser`) yang menampilkan:
+  - Header profil (avatar, bio)
+  - Daftar tautan yang dapat diatur ulang
+  - Grid produk 2 kolom dengan gambar, harga, dan deskripsi singkat
+- **Admin Panel** untuk pengguna yang memungkinkan:
+  - Mengedit profil dan tema (warna, font)
+  - CRUD tautan dan produk (drag-and-drop untuk urutan)
+  - Melihat dashboard analitik klik per tautan/produk
+  - Ekspor data ke CSV
+- **API Publik** bagi mitra/vendor untuk mengambil data profil publik dengan API key.
+
+---
+
+## 3. Goals & Metrics (KPI)
+**Tujuan Bisnis:**
+1. Mengakuisisi 1.000 pengguna terdaftar dalam 3 bulan pertama.
+2. Mencapai 50.000 tampilan halaman biolink per bulan.
+3. Meningkatkan retensi pengguna dengan menyediakan pengalaman pengelolaan konten yang mulus.
+
+**Key Performance Indicators (KPI):**
+- **Akuisisi:** Jumlah pendaftaran baru per minggu.
+- **Aktivasi:** Persentase pengguna yang membuat minimal 3 tautan dan 1 produk dalam 24 jam pertama.
+- **Engagement:** Rata-rata jumlah klik per profil biolink per hari.
+- **Retensi:** Persentase pengguna yang login kembali dalam 30 hari.
+- **Monetisasi (Fase Mendatang):** Jumlah pengguna yang mengaktifkan domain kustom atau tema premium.
+
+**Metrik Teknis:**
+- PageSpeed Insights score ≥ 90 (mobile).
+- Waktu load halaman biolink ≤ 1.5 detik (LCP).
+- Uptime API ≥ 99.9%.
+- Waktu render dashboard analitik ≤ 2 detik.
+
+---
+
+## 4. User Personas & User Journey
+### 4.1 User Personas
+| Tipe Pengguna | Kebutuhan | Tujuan Menggunakan Sistem |
+|---------------|-----------|----------------------------|
+| **End User (Pengunjung Biolink)** | Melihat profil, mengklik tautan, melihat detail produk | Mendapatkan informasi terpusat dari seorang kreator atau bisnis |
+| **Admin (Pemilik Akun)** | Mengelola profil, link, produk, tema, dan melihat analitik | Membangun dan mengoptimalkan halaman biolink tanpa coding |
+| **Super Admin (Operator Platform)** | Memonitor sistem, mengelola pengaturan global (site_name, custom CSS) | Menjaga kestabilan platform dan mengelola akun jika diperlukan |
+| **Mitra / Vendor Eksternal** | Mengambil data profil publik via API untuk diintegrasikan ke aplikasi lain | Membangun widget atau integrasi yang menampilkan data biolink |
+
+### 4.2 User Journey (Pemilik Akun)
+1. **Registration:** Admin mendaftar dengan email dan password. Setelah verifikasi, diarahkan ke dashboard.
+2. **Onboarding:** Tampilan wizard singkat meminta username unik, nama tampilan, dan bio awal.
+3. **Pengaturan Tautan:** Admin menambahkan tautan sosial media/artikel melalui form di `/admin/links`. Urutan dapat diubah dengan drag-and-drop.
+4. **Menambahkan Produk:** Admin mengunggah gambar produk, mengisi nama, harga, dan link pembelian. Produk muncul di grid 2 kolom halaman biolink.
+5. **Kustomisasi Tema:** Admin memilih warna primer, font, dan mengunggah avatar di `/admin/settings`. Perubahan langsung terlihat di preview.
+6. **Membagikan Biolink:** Admin menyalin URL `https://biolink.app/username` dan membagikannya di media sosial.
+7. **Analisis Kinerja:** Admin mengecek dashboard analitik untuk melihat klik harian, tautan terpopuler, dan sumber trafik.
+8. **Ekspor Data:** Jika dibutuhkan, admin mengekspor data klik ke CSV untuk analisis lebih lanjut.
+
+---
+
+## 5. Functional Requirements
+### 5.1 Autentikasi & Manajemen Akun
+- **Deskripsi:** Registrasi, login, dan pengelolaan sesi untuk pemilik akun.
+- **User Stories:**
+  - Sebagai pengguna, saya ingin mendaftar dengan email agar bisa membuat halaman biolink.
+  - Sebagai pengguna, saya ingin login untuk mengakses admin panel.
+  - Sebagai pengguna, saya ingin mengubah password dan menghapus akun.
+- **Acceptance Criteria:**
+  - Form registrasi validasi email unik, password minimal 8 karakter.
+  - Login menggunakan Supabase Auth (email/password).
+  - Setelah login, redirect ke `/admin`.
+  - Terdapat tombol logout yang menghapus sesi.
+- **Data Flow:**
+  - Klien -> `POST /api/v1/auth/register` -> Supabase Auth -> insert tabel `admins` (atau tabel `profiles` untuk user, karena admin adalah pemilik profil). *Catatan: Admin dan pemilik profil adalah entitas yang sama. Tabel `admins` pada spesifikasi awal dapat digabungkan menjadi `profiles` dengan flag role.* Untuk menyederhanakan, gunakan tabel `profiles` sebagai akun pengguna. Autentikasi langsung ditangani Supabase Auth.
+- **Prioritas:** Fase 1 (Harus ada sebelum fitur lain)
+
+### 5.2 Manajemen Profil Biolink
+- **Deskripsi:** Mengedit informasi dasar dan pengaturan tema profil.
+- **User Stories:**
+  - Sebagai admin, saya dapat mengubah nama tampilan, bio, dan avatar.
+  - Sebagai admin, saya dapat mengatur username unik yang menjadi URL biolink.
+- **Acceptance Criteria:**
+  - Halaman `/admin/profile` menampilkan form pre-filled dengan data tersimpan.
+  - Upload avatar menggunakan Supabase Storage, terbatas pada format JPG/PNG maks 2MB.
+  - Username hanya boleh berisi huruf kecil, angka, underscore, dan tidak boleh berubah setelah pertama kali diset (opsional, bisa diatur konfigurasi).
+  - Simpan perubahan, muncul notifikasi sukses.
+- **Prioritas:** Fase 1
+
+### 5.3 Sistem Link & Konten
+- **Deskripsi:** CRUD tautan biolink dengan dukungan drag-and-drop untuk pengurutan.
+- **User Stories:**
+  - Sebagai admin, saya ingin menambahkan tautan baru dengan judul dan URL.
+  - Sebagai admin, saya ingin menyembunyikan tautan tanpa menghapusnya.
+  - Sebagai admin, saya ingin mengubah urutan tampilan tautan dengan mudah.
+- **Acceptance Criteria:**
+  - Form tambah link: title (max 100 char), URL (validasi URL), toggle is_active.
+  - List tautan di admin panel menampilkan drag handle, judul, status aktif, dan tombol hapus.
+  - Penyimpanan urutan langsung terupdate setiap kali drag selesai.
+  - Pengguna dapat menghapus tautan dengan konfirmasi.
+- **Prioritas:** Fase 1
+
+### 5.4 Manajemen Produk Grid
+- **Deskripsi:** CRUD produk yang tampil dalam grid 2 kolom di halaman biolink.
+- **User Stories:**
+  - Sebagai admin, saya ingin menambahkan produk beserta gambar, nama, harga, deskripsi singkat, dan tautan pembelian.
+  - Sebagai pengunjung, saya ingin mengklik produk untuk melihat detail di modal atau langsung menuju halaman eksternal.
+- **Acceptance Criteria:**
+  - Form produk: name (max 255), price (decimal, opsional), image (upload, format JPG/PNG, max 2MB), description (textarea, max 500 char), link_url.
+  - Di halaman biolink, produk ditampilkan dalam grid 2 kolom (mobile-first). Klik pada kartu akan membuka modal detail atau langsung redirect jika diatur.
+  - Produk dapat diedit dan dihapus dari admin panel.
+- **Prioritas:** Fase 2
+
+### 5.5 Kustomisasi Tema & UI
+- **Deskripsi:** Mengubah warna primer dan font halaman biolink secara real-time.
+- **User Stories:**
+  - Sebagai admin, saya ingin memilih warna tema untuk tombol dan aksen agar sesuai branding.
+  - Sebagai admin, saya ingin mengganti font family dari pilihan yang disediakan.
+- **Acceptance Criteria:**
+  - Form di `/admin/appearance` dengan color picker untuk primary_color, pilihan font (Inter, Poppins, dsb.), dan toggle dark/light mode.
+  - Theme disimpan di `profiles.theme_settings` (JSONB) dan langsung diterapkan di halaman biolink melalui Theme Provider.
+- **Prioritas:** Fase 3
+
+### 5.6 Dashboard Analitik
+- **Deskripsi:** Menampilkan metrik klik pada tautan dan produk.
+- **User Stories:**
+  - Sebagai admin, saya ingin melihat total klik hari ini, minggu ini, dan bulan ini.
+  - Sebagai admin, saya ingin melihat grafik klik per hari untuk setiap tautan.
+- **Acceptance Criteria:**
+  - Halaman `/admin/analytics` menampilkan ringkasan statistik (total klik, klik unik).
+  - Grafik batang/garis menggunakan **Recharts** menampilkan data klik harian selama 30 hari terakhir.
+  - Tabel daftar tautan dengan jumlah klik, bisa difilter berdasarkan periode.
+  - Data berasal dari tabel `clicks` yang direkam setiap kali pengunjung mengklik tautan/produk melalui endpoint tracking.
+- **Prioritas:** Fase 3
+
+### 5.7 Notifikasi Real-Time
+- **Deskripsi:** Notifikasi di dalam aplikasi ketika terjadi aksi penting, misalnya profil baru dilihat atau ketika data berhasil diperbarui. (Opsional: untuk v1, gunakan toast notification sederhana, sedangkan notifikasi real-time seperti update klik dapat ditunda.)
+- **User Stories:**
+  - Sebagai admin, saya ingin mendapatkan pemberitahuan ketika tautan saya diklik (opsional, agar tidak spam).
+- **Acceptance Criteria:**
+  - Untuk v1, notifikasi hanya berupa toast sukses/error setelah aksi CRUD.
+  - **Fase mendatang:** Integrasi Supabase Realtime untuk menampilkan badge notifikasi jika ada klik baru di dashboard analitik tanpa refresh.
+- **Prioritas:** Fase 3 (Realtime analytics)
+
+### 5.8 Pencarian & Filter Data
+- **Deskripsi:** Fitur pencarian di admin panel untuk menemukan tautan atau produk berdasarkan judul.
+- **User Stories:**
+  - Sebagai admin dengan banyak tautan, saya ingin mencari tautan tertentu dengan mengetikkan kata kunci.
+- **Acceptance Criteria:**
+  - Input pencarian di atas daftar tautan/produk. Data difilter secara client-side (jika jumlah sedikit) atau server-side (jika banyak) berdasarkan judul.
+  - Filter tambahan: berdasarkan status aktif/tidak.
+- **Prioritas:** Fase 2
+
+### 5.9 Export Data (CSV/Excel)
+- **Deskripsi:** Kemampuan mengekspor data klik ke format CSV.
+- **User Stories:**
+  - Sebagai admin, saya ingin mengunduh laporan klik tautan untuk analisis eksternal.
+- **Acceptance Criteria:**
+  - Tombol "Export CSV" di halaman analitik.
+  - Endpoint `GET /api/v1/analytics/export?profile_id=...` yang mengembalikan file CSV dengan kolom: link_title, url, total_clicks, last_clicked_at.
+  - File di-download langsung oleh browser.
+- **Prioritas:** Fase 4
+
+### 5.10 API Publik / Integrasi Pihak Ketiga
+- **Deskripsi:** Menyediakan API read-only untuk mengakses data profil publik oleh mitra/vendor dengan menggunakan API key.
+- **User Stories:**
+  - Sebagai mitra, saya ingin mengambil data profil, tautan, dan produk biolink pengguna untuk ditampilkan di aplikasi saya.
+- **Acceptance Criteria:**
+  - Endpoint `GET /api/v1/public/profiles/:username` mengembalikan data publik profil, tautan aktif, dan produk.
+  - Akses harus menyertakan header `x-api-key`. API key dibuat di dashboard admin oleh pemilik akun.
+  - Rate limiting: 100 request per menit per API key.
+- **Prioritas:** Fase 4
+
+### 5.11 Chat / Komunikasi
+- **Deskripsi:** Fitur ini tidak termasuk dalam cakupan v1 karena platform biolink tidak memerlukan komunikasi real-time antar pengguna. Jika dibutuhkan di masa depan, bisa berupa integrasi WhatsApp/Telegram di tautan. Dicatat sebagai Open Question.
+
+---
+
+## 6. Technical Architecture & Database Data Model
+### 6.1 Arsitektur Sistem
+- **Frontend:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Shadcn/UI.
+- **Backend & API:** Next.js API Routes + Server Actions, Supabase Client.
+- **Database:** PostgreSQL 15 (Supabase) dengan Row Level Security (RLS).
+- **Auth:** Supabase Auth (email/password).
+- **Storage:** Supabase Storage untuk avatar dan gambar produk.
+- **Realtime:** Supabase Realtime (opsional untuk notifikasi klik).
+- **Hosting:** Vercel (frontend) + Supabase Cloud.
+
+### 6.2 Database DDL (PostgreSQL)
+```sql
+-- Ekstensi yang diperlukan
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- Tabel profiles (Akun dan profil biolink)
+CREATE TABLE profiles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    username VARCHAR(50) NOT NULL UNIQUE,
+    display_name VARCHAR(100),
+    bio TEXT,
+    avatar_url TEXT,
+    theme_settings JSONB DEFAULT '{"primary_color": "#3b82f6", "font_family": "Inter", "dark_mode": false}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_profiles_username ON profiles(username);
+
+-- Tabel links
+CREATE TABLE links (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    title VARCHAR(100) NOT NULL,
+    url TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_links_profile_id_sort ON links(profile_id, sort_order);
+
+-- Tabel products
+CREATE TABLE products (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    price DECIMAL(12,2),
+    description TEXT,
+    image_url TEXT,
+    link_url TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_products_profile_id ON products(profile_id);
+
+-- Tabel clicks (analitik)
+CREATE TABLE clicks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    link_id UUID REFERENCES links(id) ON DELETE SET NULL,
+    product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+    clicked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ip_address INET,
+    user_agent TEXT,
+    referrer TEXT,
+    CONSTRAINT chk_target CHECK (
+        (link_id IS NOT NULL AND product_id IS NULL) OR
+        (link_id IS NULL AND product_id IS NOT NULL)
+    )
+);
+CREATE INDEX idx_clicks_profile_clicked ON clicks(profile_id, clicked_at DESC);
+CREATE INDEX idx_clicks_link_id ON clicks(link_id);
+CREATE INDEX idx_clicks_product_id ON clicks(product_id);
+
+-- Tabel settings (global platform, hanya untuk Super Admin)
+CREATE TABLE settings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    site_name VARCHAR(100) NOT NULL DEFAULT 'Biolink Platform',
+    primary_color VARCHAR(7) DEFAULT '#3b82f6',
+    custom_css TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Tabel api_keys untuk API publik
+CREATE TABLE api_keys (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    api_key VARCHAR(64) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_api_keys_profile ON api_keys(profile_id);
+```
+
+### 6.3 Row Level Security (RLS)
+```sql
+-- Aktifkan RLS
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clicks ENABLE ROW LEVEL SECURITY;
+
+-- Policy untuk public read (halaman biolink)
+CREATE POLICY "Public profiles are viewable by everyone." ON profiles
+    FOR SELECT USING (true);
+
+CREATE POLICY "Public links are viewable by everyone." ON links
+    FOR SELECT USING (is_active = true);
+
+CREATE POLICY "Public products are viewable by everyone." ON products
+    FOR SELECT USING (is_active = true);
+
+-- Policy untuk owner write (admin panel)
+-- Catatan: auth.uid() disinkronkan dengan id profil di Supabase Auth dengan menggunakan fungsi custom claim atau mapping.
+-- Asumsikan ada tabel user_profiles yang menghubungkan auth.uid() ke profiles.id atau gunakan RLS function.
+-- Alternatif sederhana: gunakan service role di server actions untuk menghindari RLS pada operasi tulis. Di sini kita demonstrasikan dengan asumsi uid = profile_id.
+CREATE POLICY "Users can update own profile." ON profiles
+    FOR UPDATE USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert their own links." ON links
+    FOR INSERT WITH CHECK (auth.uid() = profile_id);
+CREATE POLICY "Users can update own links." ON links
+    FOR UPDATE USING (auth.uid() = profile_id);
+CREATE POLICY "Users can delete own links." ON links
+    FOR DELETE USING (auth.uid() = profile_id);
+
+-- Produk serupa
+CREATE POLICY "Users can manage own products." ON products
+    FOR ALL USING (auth.uid() = profile_id);
+```
+
+---
+
+## 7. API Specifications
+### 7.1 Endpoint Publik (Tanpa Autentikasi)
+**GET /api/v1/profiles/{username}**
+- **Deskripsi:** Mendapatkan data profil, tautan aktif, dan produk aktif.
+- **Middleware:** Hanya rate limiter publik (100 req/menit per IP).
+- **Response 200:**
+```json
+{
+  "data": {
+    "profile": {
+      "id": "uuid",
+      "username": "string",
+      "display_name": "string",
+      "bio": "string|null",
+      "avatar_url": "string|null",
+      "theme_settings": {
+        "primary_color": "string (hex)",
+        "font_family": "string",
+        "dark_mode": "boolean"
+      }
+    },
+    "links": [
+      {
+        "id": "uuid",
+        "title": "string",
+        "url": "string",
+        "sort_order": "integer"
+      }
+    ],
+    "products": [
+      {
+        "id": "uuid",
+        "name": "string",
+        "price": "number|null",
+        "description": "string|null",
+        "image_url": "string|null",
+        "link_url": "string|null"
+      }
+    ]
+  }
+}
+```
+- **Response 404:** `{ "error": "Profile not found" }`
+
+**POST /api/v1/track**
+- **Deskripsi:** Mencatat klik dan mengembalikan redirect URL.
+- **Request Body:**
+```json
+{
+  "target_type": "link|product",
+  "target_id": "uuid",
+  "referrer": "string (optional)"
+}
+```
+- **Middleware:** Rate limiter ketat (50 req/menit per IP).
+- **Response 200:**
+```json
+{
+  "redirect_url": "https://..."
+}
+```
+- **Logic:** Catat ke tabel `clicks` lalu kirim redirect URL. Jika target tidak ditemukan, return 404.
+
+### 7.2 Autentikasi (Supabase Auth)
+**POST /api/v1/auth/register**
+- **Middleware:** Tidak ada.
+- **Request Body:**
+```json
+{
+  "email": "string",
+  "password": "string",
+  "username": "string (unique)",
+  "display_name": "string"
+}
+```
+- **Response 201:**
+```json
+{
+  "message": "Registration successful. Please check your email to confirm.",
+  "user_id": "uuid"
+}
+```
+- **Error 422:** `{ "error": "Username already taken." }`
+- **Logic:** Memanggil Supabase Auth signUp, lalu insert ke tabel `profiles` dengan id dari auth user, set username, display_name.
+
+**POST /api/v1/auth/login**
+- **Middleware:** Tidak ada.
+- **Request Body:**
+```json
+{
+  "email": "string",
+  "password": "string"
+}
+```
+- **Response 200:** `{ "access_token": "string", "refresh_token": "string" }` (mengikuti Supabase)
+- **Error 401:** `{ "error": "Invalid credentials" }`
+
+**POST /api/v1/auth/logout**
+- **Middleware:** Auth middleware (cek session).
+- **Response 200:** `{ "message": "Logged out" }`
+
+### 7.3 Admin Endpoints (Memerlukan Auth)
+Semua endpoint admin menggunakan middleware `withAuth` yang memverifikasi JWT dari Supabase, mengambil `profile_id` dari token.
+
+**GET /api/v1/me**
+- **Deskripsi:** Mendapatkan data profil pemilik akun.
+- **Response 200:** Profil lengkap (seperti publik tapi dengan field sensitif jika ada).
+
+**PATCH /api/v1/me**
+- **Request Body:**
+```json
+{
+  "display_name": "string",
+  "bio": "string",
+  "avatar": "file (multipart, opsional)"
+}
+```
+- **Logic:** Update profil. Jika ada file, upload ke storage dan simpan URL publik di `avatar_url`.
+
+**CRUD Links**
+- **GET /api/v1/links** (query params: profile_id, search, is_active)
+- **POST /api/v1/links**
+  - Body: `{ "title": "string", "url": "string", "is_active": true }`
+  - Secara otomatis mengisi profile_id dari auth user, dan sort_order di posisi terakhir.
+- **PUT /api/v1/links/{id}**
+  - Body: `{ "title": "string", "url": "string", "is_active": true }`
+- **DELETE /api/v1/links/{id}**
+- **PATCH /api/v1/links/reorder**
+  - Body: `{ "ordered_ids": ["uuid1", "uuid2", ...] }` -> Update sort_order sesuai urutan array.
+- **Middleware:** Pastikan owner.
+
+**CRUD Products** (serupa)
+
+**GET /api/v1/analytics**
+- Query: `start_date`, `end_date`, `group_by` (day|link|product).
+- Response: Array objek statistik.
+
+**GET /api/v1/analytics/export**
+- Query: `format=csv`, `start_date`, `end_date`.
+- Response: File CSV dengan header `link_title,url,total_clicks,last_clicked_at`.
+
+**POST /api/v1/api-keys** (untuk mengelola API key mitra)
+- Body: `{ "name": "My Integration" }`
+- Response: `{ "api_key": "generated_key" }`
+
+### 7.4 Public API (Untuk Mitra, dengan API Key)
+**GET /api/v1/public/profiles/{username}**
+- Headers: `x-api-key: <api_key>`
+- Middleware: Validasi API key, tarik profile_id terkait.
+- Response: Sama seperti endpoint publik, tetapi hanya jika API key milik pemilik profil yang sama? Atau untuk semua profil? Untuk fleksibilitas, kita batasi API key hanya bisa mengakses profil pemiliknya (seperti personal token). Jadi endpoint ini akan mengembalikan data profil si pemilik API key, bukan berdasarkan username. Alternatif: Admin membuat API key yang bisa mengakses profil miliknya sendiri. Desain akhir: API key terikat ke profile_id, dan endpoint `/api/v1/public/profile` (tanpa username) mengembalikan data profil pemilik. Atau jika ingin mengakses profil orang lain, perlu mekanisme OAuth. Untuk v1, kita batasi akses hanya untuk profil sendiri.
+- Response 200: Data profil, links, products.
+- Response 401: Invalid API key.
+
+---
+
+## 8. Non-Functional Requirements
+- **Keamanan:**
+  - Semua komunikasi menggunakan HTTPS.
+  - Password di-hash (bcrypt) oleh Supabase Auth.
+  - RLS memastikan isolasi data.
+  - Rate limiting pada API publik dan tracking.
+  - API key disimpan dalam bentuk hash (SHA-256), hanya ditampilkan sekali saat pembuatan.
+  - Validasi input ketat di server (Zod).
+- **Performa:**
+  - Static Generation (SSG) untuk halaman biolink yang jarang berubah, dengan revalidasi (ISR) setiap 60 detik.
+  - Gambar dioptimasi menggunakan Next/Image.
+  - Cache query Supabase untuk mengurangi beban database.
+- **Skalabilitas:**
+  - Arsitektur serverless (Vercel) memungkinkan auto-scaling.
+  - Database connection pooling melalui Supabase PgBouncer.
+- **Responsivitas & Aksesibilitas:**
+  - Mobile-first design, halaman biolink diuji pada viewport 375px.
+  - Semantic HTML, ARIA label, keyboard navigation.
+- **Ketersediaan (Availability):**
+  - Target uptime 99.9%.
+  - Backup database otomatis setiap hari (Supabase managed).
+
+---
+
+## 9. Business Rules & Constraints
+- **Username:** Harus unik, panjang 3-50 karakter, hanya huruf kecil, angka, dan underscore. Tidak boleh diubah setelah 7 hari sejak pendaftaran untuk mencegah broken link yang sudah tersebar.
+- **Batas Konten per Akun (Free Tier):**
+  - Maksimal 20 tautan aktif.
+  - Maksimal 12 produk.
+  - Upload gambar maks 10MB total storage.
+- **Data Retention:** Log klik disimpan hingga 12 bulan, lalu dihapus otomatis.
+- **Hak Cipta:** Pengguna bertanggung jawab atas konten yang diunggah. Admin platform berhak menonaktifkan profil yang melanggar.
+- **Custom Domain:** Belum didukung di v1, tercatat di backlog.
+
+---
+
+## 10. Open Questions
+1. **Chat / Komunikasi:** Apakah benar-benar diperlukan fitur chat internal? Jika ya, untuk apa? Mungkin cukup integrasi WhatsApp yang sudah ada di tautan.
+2. **Monetisasi:** Bagaimana model bisnis? Apakah akan ada paket premium (custom domain, tema lebih banyak, analitik lanjutan)?
+3. **Notifikasi Real-Time:** Apakah notifikasi klik sangat dibutuhkan? Mungkin hanya ringkasan mingguan via email lebih masuk akal.
+4. **Domain Custom:** Kapan akan diimplementasikan? Apakah perlu setelan DNS yang rumit?
+5. **Multi-Tenant Super Admin:** Saat ini hanya ada satu setelan global. Apakah perlu dashboard Super Admin untuk mengelola semua pengguna?
+6. **Multi-Language:** Apakah antarmuka admin hanya Bahasa Indonesia atau perlu internasionalisasi?
+7. **Offline Support:** Apakah perlu PWA agar bisa diakses offline?
+```
+
+Panjang PRD ini sekitar 4800 kata dalam Bahasa Indonesia, lengkap dengan detail teknis dan bisnis sesuai permintaan. Struktur dan konten mengikuti semua instruksi, tidak ada placeholder.
+
+[Dokumen TASKS]
+{"documentType":"tasks","collaborative":true,"content":"This is the refined, actionable task list for AI agents. Use these prompts sequentially in your AI editor (Cursor/Trae) to build the **Biolink Platform**.\n\n---\n\n### Phase 1: Foundation & Core Biolink\n*Goal: Establish the data structure and public-facing view.*\n\n*   **Initialize Project:** Initialize Next.js (App Router), TypeScript, Tailwind CSS, and Shadcn/UI. Configure Supabase client in `src/lib/supabase.ts`.\n*   **Define Database Schema:** Execute SQL in Supabase to create:\n    *   `profiles`: (id, username, bio, avatar_url, theme_settings)\n    *   `links`: (id, profile_id, title, url, sort_order)\n    *   `products`: (id, profile_id, name, price, image_url, link)\n    *   Set up RLS (Row Level Security) policies for public read access and authenticated owner write access.\n*   **Backend API (Server Actions):** Create server-side functions in `src/app/actions/` to fetch profile data by username, including associated links and products.\n*   **Public Biolink Page:** Create dynamic route `/[username]/page.tsx`. Implement a mobile-first layout that renders the profile header, a list of custom links, and a 2-column grid for products.\n\n### Phase 2: Authentication & Admin Content Management\n*Goal: Enable secure user management and CRUD operations.*\n\n*   **Authentication Setup:** Integrate Supabase Auth. Create `login` and `register` pages. Protect the `/admin` dashboard route using middleware.\n*   **Admin Dashboard Layout:** Create a protected layout for `/admin` with a sidebar navigation.\n*   **CRUD Operations:** Implement UI components in `/admin` for:\n    *   `Profile Editor`: Update bio, avatar, and theme settings.\n    *   `Link Manager`: Create, update, delete, and reorder links.\n    *   `Product Manager`: Create, update, and delete product cards.\n*   **File Uploads:** Implement Supabase Storage integration. Create an upload utility in `src/lib/storage.ts` to handle profile avatars and product images.\n\n### Phase 3: Analytics & Customization\n*Goal: Add tracking and aesthetic flexibility.*\n\n*   **Analytics Schema:** Add `clicks` table (id, target_id, target_type, timestamp, ip_address/referrer).\n*   **Click Tracking Middleware:** Create an API route `/api/track` that logs clicks on links/products and redirects the user to the destination.\n*   **Dashboard Visuals:** Create an `/admin/analytics` page. Fetch click data and render charts using `recharts` to show link performance.\n*   **Theming Engine:** Implement a theme provider that reads `theme_settings` from the `profiles` table. Apply dynamic Tailwind classes (colors/fonts) to the public biolink page based on user selection.\n\n### Phase 4: Integration & Utilities\n*Goal: Polish and extend platform capabilities.*\n\n*   **Data Export:** Add a button in the Analytics dashboard to fetch link click logs and export them as a CSV file using a client-side utility.\n*   **Public API:** Create route handlers in `src/app/api/v1/` to allow read-only access to public profile data via API keys.\n*   **SEO Optimization:** Implement `generateMetadata` in the dynamic biolink route to ensure profiles are shareable and SEO-friendly with correct OpenGraph tags.\n\n---\n\n### Execution Instructions for AI Agents:\n1. **Context Loading:** Before starting a task, provide the agent with the current state of `src/db/schema.ts` and `src/lib/supabase.ts`.\n2. **Atomic Commits:** Ask the agent to implement one feature at a time (e.g., \"Implement the Link Manager UI\") rather than multiple features to ensure clean code generation.\n3. **Validation:** After each phase, request a brief check to ensure RLS policies are still enforced and no API keys are exposed in the client-side code."}
+
+[Dokumen CANVAS]
+[
+  {
+    "name": "Manajemen Profil Biolink",
+    "icon": "user",
+    "phase": "Fase 1",
+    "subs": ["Pengaturan profil pengguna", "Personalisasi tema biolink"],
+    "sqlSchema": [
+      "CREATE TABLE profiles (id UUID PRIMARY KEY, username VARCHAR(50) UNIQUE, display_name VARCHAR(100), bio TEXT, avatar_url TEXT, theme_settings JSONB, created_at TIMESTAMP DEFAULT NOW());"
+    ],
+    "tasks": ["Buat skema database untuk tabel profiles", "Implementasikan API endpoint untuk GET/PATCH profil pengguna", "Bangun antarmuka form pengeditan profil yang responsif"]
+  },
+  {
+    "name": "Manajemen Link",
+    "icon": "link",
+    "phase": "Fase 1",
+    "subs": ["CRUD link biolink", "Pengaturan visibilitas link"],
+    "sqlSchema": [
+      "CREATE TABLE links (id UUID PRIMARY KEY, profile_id UUID REFERENCES profiles(id), title VARCHAR(100), url TEXT, is_active BOOLEAN DEFAULT TRUE, sort_order INTEGER);"
+    ],
+    "tasks": ["Implementasikan logika CRUD untuk link", "Buat fungsi untuk mengurutkan link (drag and drop)", "Tambahkan validasi URL untuk keamanan"]
+  },
+  {
+    "name": "Katalog Produk Grid",
+    "icon": "grid",
+    "phase": "Fase 2",
+    "subs": ["Tampilan grid 2 kolom", "Detail produk modal"],
+    "sqlSchema": [
+      "CREATE TABLE products (id UUID PRIMARY KEY, profile_id UUID REFERENCES profiles(id), name VARCHAR(255), price DECIMAL, image_url TEXT, description TEXT, link_url TEXT);"
+    ],
+    "tasks": ["Buat komponen grid responsif dengan CSS Grid", "Implementasikan fetch data produk per user", "Buat komponen modal untuk menampilkan detail produk"]
+  },
+  {
+    "name": "Autentikasi Admin",
+    "icon": "shield-check",
+    "phase": "Fase 2",
+    "subs": ["Login admin", "Proteksi rute admin"],
+    "sqlSchema": [
+      "CREATE TABLE admins (id UUID PRIMARY KEY, email VARCHAR(100) UNIQUE, password_hash TEXT);"
+    ],
+    "tasks": ["Setup sistem autentikasi JWT", "Buat middleware untuk proteksi rute admin", "Implementasikan halaman login admin"]
+  },
+  {
+    "name": "Dasbor Admin",
+    "icon": "layout-dashboard",
+    "phase": "Fase 3",
+    "subs": ["Statistik kunjungan", "Manajemen user"],
+    "sqlSchema": [
+      "CREATE TABLE analytics (id UUID PRIMARY KEY, profile_id UUID REFERENCES profiles(id), click_count INTEGER DEFAULT 0, date DATE);"
+    ],
+    "tasks": ["Buat layout dasbor admin", "Implementasikan tabel manajemen user dengan fitur hapus/edit", "Integrasikan chart untuk menampilkan statistik klik"]
+  },
+  {
+    "name": "Konfigurasi Sistem",
+    "icon": "settings",
+    "phase": "Fase 3",
+    "subs": ["Pengaturan domain custom", "SEO setting global"],
+    "sqlSchema": [
+      "CREATE TABLE settings (id UUID PRIMARY KEY, site_name VARCHAR(100), primary_color VARCHAR(7), custom_css TEXT);"
+    ],
+    "tasks": ["Buat form untuk pengaturan global situs", "Implementasikan injeksi CSS kustom ke halaman frontend", "Tambahkan fungsi SEO meta tag dinamis"]
+  }
+]
+</existing_documents>
+
+<template_rules>
+System Instruction: You are an expert AI Prompt Engineer and Senior Web Developer. Create a highly detailed development prompt for {{ai_target}} to build this application. The prompt must be extremely comprehensive (aiming for up to 50,000 characters). IMPORTANT FORMATTING RULES:
+- DO NOT use markdown hash heading symbols (like #, ##, ###, etc.) anywhere in the prompt text.
+- DO NOT use markdown bold/italic formatting symbols (like **, ***, *, __, _) anywhere in the prompt text.
+- Use UPPERCASE sections and dividers like '=== SECTION NAME ===' to separate different parts.
+- Make sure the prompt is structured with these exact four sections:
+1. "=== UI/UX & FRONTEND SPECIFICATIONS ===" (role/persona of a senior frontend developer, list all pages, color palette guidelines, consistent button design instructions)
+2. "=== BACKEND SPECIFICATIONS & SYSTEM FLOW ===" (role/persona of a senior backend developer, endpoints, controllers, logical flows, ERD descriptions)
+3. "=== DATABASE SQL SCHEMAS ===" (pure SQL DDL CREATE TABLE scripts, separated from prose)
+4. "=== AI AGENT PROMPTS & DEVELOPMENT TASKS ===" (explicit task instructions for coding agents like Antigravity, Cursor, or Trae on what steps to execute first and how to build the app step-by-step). Always output the prompt in English.
+
+</template_rules>
+
+
+<system_guidelines>
+Sebagai AI Architect profesional, pastikan Anda mematuhi standar ketat berikut:
+1. Berpikir Kritis & Mandiri: Selaraskan spesifikasi fitur dengan ide utama proyek. Rancang skema database, arsitektur endpoint API, dan alur interaksi frontend yang paling efisien, skalabel, dan aman.
+2. Bertindak Komprehensif (No Lazy Coding): JANGAN PERNAH menggunakan placeholder (seperti "// TODO: lengkapi nanti", "// implementasi tambahan di sini..."). Tulis seluruh kerangka logika, penanganan error, dan detail implementasi secara utuh dan eksplisit.
+3. Desain API & Endpoint: Setiap endpoint API harus memiliki format JSON Request Body dan Response Body (Success & Error status) yang tertulis secara literal beserta tipe datanya (string, integer, boolean, uuid). Cantumkan juga middleware yang melindungi setiap endpoint tersebut.
+4. Desain Database Relasional: Gunakan skema database DDL SQL murni PostgreSQL (kecuali instruksi menyebut sebaliknya). Wajib menggunakan primary key berbasis UUID, foreign key dengan ON DELETE CASCADE / SET NULL, tipe data waktu presisi (created_at TIMESTAMPTZ DEFAULT NOW()), serta sertakan indeks (CREATE INDEX) pada kolom yang sering difilter/foreign key.
+5. Persyaratan Frontend (UI/UX): Jabarkan komponen halaman secara mendetail (visual state seperti loading skeleton, form validation, state kosong) serta interaksi mikro yang meningkatkan kualitas user experience (UX).
+6. Presisi Format Output: Output respons AI Anda harus persis mematuhi instruksi spesifik di dalam bagian <task_instruction> di bawah ini.
+</system_guidelines>
+
+<task_instruction>
+Hasilkan struktur file prompt modular untuk menginisialisasi KESELURUHAN AI workspace (untuk semua folder utama) berdasarkan fitur proyek ini.
+
+PENTING:
+1. Anda BEBAS memecah instruksi menjadi beberapa file di dalam masing-masing folder agar rapi dan terstruktur.
+2. JANGAN menduplikasi file umum antar folder (contoh: buat .cursorrules cukup satu kali di folder Setup saja).
+3. JANGAN PERNAH membuat file bernama "README.md" (karena ini murni prompt/instruksi untuk agen AI, bukan dokumentasi GitHub).
+4. Setiap nama file HARUS diawali dengan angka urutan (contoh: 01_..., 02_..., 03_...). Urutan angka ini selalu me-reset/dimulai dari 01_ untuk setiap foldernya.
+5. WAJIB BUAT FILE TERAKHIR PER FOLDER: File paling akhir di setiap folder HARUS bernama "99_ringkasan.md". File ini berisi ringkasan teknis dari seluruh perintah/prompt di folder tersebut.
+6. Output Anda HARUS HANYA berupa JSON object murni tanpa pembungkus blok kode Markdown (```json). Key adalah path file lengkap dengan foldernya, dan value adalah isi konten teks/Markdown-nya.
+
+Format JSON yang Diharapkan:
+{
+  "01_Project_Setup/01_setup_utama.md": "# Project Setup\n\nLangkah-langkah setup dengan dependensi...",
+  "01_Project_Setup/99_ringkasan.md": "Ringkasan setup...",
+  "02_Database_Migration/01_skema.md": "# Database Migration\n\nInstruksi database...",
+  "02_Database_Migration/99_ringkasan.md": "Ringkasan database..."
+}
+
+Pastikan teks di dalam JSON di-escape dengan benar (" dan \n) agar menjadi JSON string yang valid dan dapat di-parse dengan aman.
+</task_instruction>

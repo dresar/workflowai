@@ -17,12 +17,23 @@ export function encrypt(plaintext: string): string {
 }
 
 export function decrypt(ciphertext: string): string {
-  const [ivHex, encryptedHex] = ciphertext.split(':');
-  if (!ivHex || !encryptedHex) throw new Error('Invalid encrypted value format');
-  const iv = Buffer.from(ivHex, 'hex');
-  const encrypted = Buffer.from(encryptedHex, 'hex');
-  const decipher = crypto.createDecipheriv(ALGORITHM, getKey(), iv);
-  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
+  if (!ciphertext) return '';
+  // If ciphertext is a raw key (no IV prefix colon), return as is
+  if (!ciphertext.includes(':')) {
+    return ciphertext;
+  }
+  try {
+    const [ivHex, encryptedHex] = ciphertext.split(':');
+    if (!ivHex || !encryptedHex) return ciphertext;
+    const iv = Buffer.from(ivHex, 'hex');
+    const encrypted = Buffer.from(encryptedHex, 'hex');
+    const decipher = crypto.createDecipheriv(ALGORITHM, getKey(), iv);
+    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
+    return decrypted;
+  } catch (err) {
+    // If decryption fails (e.g. key format or encryption key changed), return ciphertext directly
+    return ciphertext;
+  }
 }
 
 export function maskKey(key: string): string {

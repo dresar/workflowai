@@ -196,6 +196,63 @@ function TaskCard({ task, onToggle, onDelete }: { task: Task; onToggle: () => vo
   );
 }
 
+// Helper for smart category inference
+function inferTaskCategory(title: string, description: string = '', rawCat: string = ''): TaskCategory {
+  const text = `${title} ${description} ${rawCat}`.toLowerCase();
+  
+  if (text.includes('test') || text.includes('vitest') || text.includes('jest') || text.includes('playwright') || text.includes('cypress') || text.includes('e2e') || text.includes('uji')) {
+    return 'testing';
+  }
+  if (text.includes('database') || text.includes('tabel') || text.includes('schema') || text.includes('drizzle') || text.includes('migration') || text.includes('postgres') || text.includes('neon') || text.includes('sql') || text.includes('db')) {
+    return 'database';
+  }
+  if (text.includes('docker') || text.includes('deploy') || text.includes('ci/cd') || text.includes('github action') || text.includes('vercel') || text.includes('container') || text.includes('hosting')) {
+    return 'deployment';
+  }
+  if (text.includes('setup') || text.includes('config') || text.includes('inisialisasi') || text.includes('eslint') || text.includes('tsconfig') || text.includes('env') || text.includes('structure') || text.includes('folder')) {
+    return 'config';
+  }
+  if (text.includes('page') || text.includes('halaman') || text.includes('ui') || text.includes('tampilan') || text.includes('react') || text.includes('component') || text.includes('komponen') || text.includes('landing') || text.includes('dashboard') || text.includes('form') || text.includes('css') || text.includes('frontend') || text.includes('view') || text.includes('modal')) {
+    return 'frontend';
+  }
+  if (text.includes('api') || text.includes('endpoint') || text.includes('backend') || text.includes('route') || text.includes('controller') || text.includes('service') || text.includes('express') || text.includes('auth') || text.includes('jwt') || text.includes('middleware') || text.includes('crud')) {
+    return 'backend';
+  }
+
+  const validCats: TaskCategory[] = ['frontend', 'backend', 'database', 'config', 'testing', 'deployment'];
+  const catLower = rawCat.toLowerCase() as TaskCategory;
+  if (validCats.includes(catLower)) return catLower;
+
+  return 'backend';
+}
+
+function normalizeTaskList(tasks: any[]): Task[] {
+  const normalized = tasks.map((t, i) => ({
+    id: t.id || `task-${i}-${Date.now()}`,
+    title: t.title || 'Untitled Task',
+    description: t.description || '',
+    category: inferTaskCategory(t.title || '', t.description || '', t.category || ''),
+    priority: (t.priority || 'medium') as TaskPriority,
+    done: Boolean(t.done),
+    isAiGenerated: t.isAiGenerated ?? true,
+  }));
+
+  // Ensure testing tasks exist
+  if (!normalized.some(t => t.category === 'testing')) {
+    normalized.push({
+      id: `task-test-vitest-${Date.now()}`,
+      title: 'Unit testing & API integration tests',
+      description: 'Implementasi unit test dengan Vitest & integration test untuk endpoint API',
+      category: 'testing',
+      priority: 'medium',
+      done: false,
+      isAiGenerated: true,
+    });
+  }
+
+  return normalized;
+}
+
 // ============================================================
 // MAIN PAGE
 // ============================================================
@@ -207,22 +264,18 @@ function TasksPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [filterCat, setFilterCat] = useState<TaskCategory | 'all'>('all');
 
-  const done = tasks.filter(t => t.done).length;
-  const total = tasks.length;
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-
   // Load saved tasks
   useEffect(() => {
     const projectId = localStorage.getItem("active_project_id");
     if (!projectId) return;
-    
+
     // 1. Coba load dari localStorage
     const local = localStorage.getItem(`tasks_list_${projectId}`);
     if (local) {
       try {
         const parsed = JSON.parse(local);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setTasks(parsed);
+          setTasks(normalizeTaskList(parsed));
           return;
         }
       } catch {}
@@ -236,8 +289,9 @@ function TasksPage() {
           let parsed;
           try { const j = JSON.parse(raw); if (j?.content) { parsed = JSON.parse(j.content); } else { parsed = j; } } catch { return; }
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setTasks(parsed);
-            localStorage.setItem(`tasks_list_${projectId}`, JSON.stringify(parsed));
+            const norm = normalizeTaskList(parsed);
+            setTasks(norm);
+            localStorage.setItem(`tasks_list_${projectId}`, JSON.stringify(norm));
           }
         } catch {}
       }
@@ -287,7 +341,6 @@ function TasksPage() {
 
       if (result?.content) {
         try {
-          // Unpack JSON wrapper jika respons dibungkus dalam object content
           let text = result.content;
           try {
             const wrapper = JSON.parse(result.content);
@@ -300,40 +353,37 @@ function TasksPage() {
           const raw = text.replace(/```json/g, '').replace(/```/g, '').trim();
           try { parsed = JSON.parse(raw); } catch {}
 
-          if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].title) {
-            setTasks(parsed.map((t: any, i: number) => ({ ...t, id: t.id || `ai-${i}-${Date.now()}`, done: false, isAiGenerated: true })));
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const norm = normalizeTaskList(parsed);
+            setTasks(norm);
             toast.success("Tasks berhasil digenerate oleh AI!");
           } else {
             // Fallback parsing jika AI menghasilkan format markdown teks list
             const lines = text.split('\n');
             const aiTasks: Task[] = [];
-            let currentCategory: TaskCategory = 'backend';
 
             for (const line of lines) {
               const cleaned = line.trim();
               if (!cleaned) continue;
 
-              const lower = cleaned.toLowerCase();
-              if (lower.includes('frontend') || lower.includes('halaman') || lower.includes('tampilan')) {
-                currentCategory = 'frontend';
-                continue;
-              } else if (lower.includes('database') || lower.includes('tabel') || lower.includes('migrasi')) {
-                currentCategory = 'database';
-                continue;
-              } else if (lower.includes('backend') || lower.includes('api') || lower.includes('endpoint')) {
-                currentCategory = 'backend';
-                continue;
-              }
-
               const taskMatch = line.match(/^(?:\d+\.|[-*])\s+(.+)/);
               if (taskMatch && taskMatch[1].length > 5) {
-                aiTasks.push({ id: `ai-${aiTasks.length}-${Date.now()}`, title: taskMatch[1].trim(), category: currentCategory, priority: 'medium', done: false, isAiGenerated: true });
+                const title = taskMatch[1].trim();
+                aiTasks.push({
+                  id: `ai-${aiTasks.length}-${Date.now()}`,
+                  title,
+                  category: inferTaskCategory(title),
+                  priority: 'medium',
+                  done: false,
+                  isAiGenerated: true,
+                });
               }
             }
 
             if (aiTasks.length > 0) {
-              setTasks(aiTasks);
-              toast.success(`${aiTasks.length} tasks digenerate dari AI!`);
+              const norm = normalizeTaskList(aiTasks);
+              setTasks(norm);
+              toast.success(`${norm.length} tasks digenerate dari AI!`);
             } else {
               toast.error("Format respons AI tidak dikenali");
             }
@@ -358,7 +408,12 @@ function TasksPage() {
     <div className="flex h-full flex-col overflow-hidden bg-background">
       {/* Top Bar */}
       <div className="flex items-center justify-between border-b border-border bg-card/50 px-5 py-2.5 backdrop-blur-md z-10 relative">
-        <StageBar active={1} />
+        <div className="flex items-center gap-3">
+          <StageBar active={1} />
+          <span className="text-[10px] font-semibold text-amber-300 bg-amber-950/40 border border-amber-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1" title="Untuk hasil kodingan maksimal, gunakan bantuan Claude 3.5 Sonnet / Claude AI">
+            <Lucide.Sparkles size={10} className="text-amber-400" /> Rec: Claude 3.5 Sonnet
+          </span>
+        </div>
         <div className="flex items-center gap-2">
           <Button onClick={() => navigate({ to: "/app/canvas" })} variant="outline" size="sm" className="text-[11px] h-8 gap-1.5 border-slate-700">
             <Lucide.ArrowLeft size={12} /> Canvas
@@ -383,19 +438,7 @@ function TasksPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <aside className="w-64 border-r border-border bg-card/30 flex flex-col p-4 gap-4 overflow-y-auto">
-          {/* Progress */}
-          <div className="p-4 rounded-xl border border-border bg-slate-950/40">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-300">Progress Tasks</span>
-              <span className="text-xs font-bold text-indigo-400">{done}/{total}</span>
-            </div>
-            <div className="h-2 rounded-full bg-slate-800 overflow-hidden mb-1">
-              <div className="h-full bg-gradient-to-r from-indigo-600 to-violet-500 transition-all duration-500" style={{ width: `${pct}%` }} />
-            </div>
-            <div className="text-[10px] text-slate-500 text-right">{pct}% selesai</div>
-          </div>
-
-          {/* Filter */}
+          {/* Filter Kategori */}
           <div>
             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Filter Kategori</div>
             <div className="space-y-1">
@@ -418,10 +461,11 @@ function TasksPage() {
           <div className="mt-auto p-3 rounded-xl bg-slate-950/30 border border-slate-800/60">
             <div className="text-[9px] font-bold text-slate-600 uppercase tracking-wider mb-2">Statistik</div>
             {[
-              { label: 'Belum dikerjakan', val: tasks.filter(t => !t.done).length, cls: 'text-slate-400' },
-              { label: 'Selesai', val: tasks.filter(t => t.done).length, cls: 'text-emerald-400' },
-              { label: 'AI Generated', val: tasks.filter(t => t.isAiGenerated).length, cls: 'text-violet-400' },
-              { label: 'Manual', val: tasks.filter(t => !t.isAiGenerated).length, cls: 'text-sky-400' },
+              { label: 'Total Task AI', val: tasks.length, cls: 'text-indigo-400' },
+              { label: 'Frontend', val: tasks.filter(t => t.category === 'frontend').length, cls: 'text-violet-400' },
+              { label: 'Backend', val: tasks.filter(t => t.category === 'backend').length, cls: 'text-sky-400' },
+              { label: 'Database', val: tasks.filter(t => t.category === 'database').length, cls: 'text-emerald-400' },
+              { label: 'Testing', val: tasks.filter(t => t.category === 'testing').length, cls: 'text-rose-400' },
             ].map(({ label, val, cls }) => (
               <div key={label} className="flex justify-between items-center py-1 text-[10px]">
                 <span className="text-slate-600">{label}</span>
@@ -467,9 +511,14 @@ function TasksPage() {
                   {filterCat === 'all' ? 'Semua Tasks' : CATEGORY_META[filterCat].label}
                   <span className="ml-2 text-slate-600 font-normal">({filtered.length})</span>
                 </h1>
-                <button onClick={() => setTasks(ts => ts.map(t => ({ ...t, done: done < total })))} className="text-[10px] text-slate-500 hover:text-slate-300 transition font-medium">
-                  {done < total ? "Centang semua" : "Hapus semua centang"}
-                </button>
+                {tasks.length > 0 && (
+                  <button onClick={() => {
+                    const allDone = tasks.every(t => t.done);
+                    setTasks(ts => ts.map(t => ({ ...t, done: !allDone })));
+                  }} className="text-[10px] text-slate-500 hover:text-slate-300 transition font-medium">
+                    {tasks.every(t => t.done) ? "Hapus semua centang" : "Centang semua"}
+                  </button>
+                )}
               </div>
               {filtered.map(task => (
                 <TaskCard key={task.id} task={task} onToggle={() => toggleTask(task.id)} onDelete={() => deleteTask(task.id)} />

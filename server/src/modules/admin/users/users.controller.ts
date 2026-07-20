@@ -23,7 +23,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       role: role || 'user',
       isActive: isActive !== undefined ? isActive : true,
       passwordHash: password || 'default-password-hash',
-      promptTokens: promptTokens !== undefined ? parseInt(promptTokens, 10) : 5,
+      promptTokens: promptTokens !== undefined ? parseInt(promptTokens, 10) : 100,
     }).returning();
     sendCreated(res, item);
   } catch (err) { next(err); }
