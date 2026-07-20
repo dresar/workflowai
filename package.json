@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite dev",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev --prefix server\"",
-    "build": "vite build",
+    "build": "vite build && esbuild api/index.ts --bundle --platform=node --format=esm --outfile=api/index.js --packages=external",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
