@@ -57,7 +57,7 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
 
 export async function addTokensToUser(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { amount } = req.body;
+    const { amount, reason } = req.body;
     const numAmount = parseInt(amount, 10) || 0;
     const [user] = await db.select().from(users).where(eq(users.id, req.params.id as string)).limit(1);
     if (!user) throw new NotFoundError('User');
@@ -65,6 +65,10 @@ export async function addTokensToUser(req: Request, res: Response, next: NextFun
     const newTotal = Math.max(0, (user.promptTokens || 0) + numAmount);
     const [updated] = await db.update(users).set({ promptTokens: newTotal, updatedAt: new Date() }).where(eq(users.id, req.params.id as string)).returning();
 
-    sendSuccess(res, { user: updated, added: numAmount, newTotal }, `Berhasil menyesuaikan token pengguna (${numAmount >= 0 ? '+' : ''}${numAmount})`);
+    const adjustmentReason = reason && typeof reason === 'string' && reason.trim()
+      ? reason.trim()
+      : (numAmount < 0 ? 'Koreksi penyesuaian token oleh Administrator' : 'Top-Up token oleh Administrator');
+
+    sendSuccess(res, { user: updated, added: numAmount, newTotal, reason: adjustmentReason }, `Berhasil menyesuaikan token pengguna (${numAmount >= 0 ? '+' : ''}${numAmount})`);
   } catch (err) { next(err); }
 }

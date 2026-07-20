@@ -3241,13 +3241,14 @@ async function deleteUser(req, res, next) {
 }
 async function addTokensToUser(req, res, next) {
   try {
-    const { amount } = req.body;
+    const { amount, reason } = req.body;
     const numAmount = parseInt(amount, 10) || 0;
     const [user] = await db.select().from(users).where(eq16(users.id, req.params.id)).limit(1);
     if (!user) throw new NotFoundError("User");
     const newTotal = Math.max(0, (user.promptTokens || 0) + numAmount);
     const [updated] = await db.update(users).set({ promptTokens: newTotal, updatedAt: /* @__PURE__ */ new Date() }).where(eq16(users.id, req.params.id)).returning();
-    sendSuccess(res, { user: updated, added: numAmount, newTotal }, `Berhasil menyesuaikan token pengguna (${numAmount >= 0 ? "+" : ""}${numAmount})`);
+    const adjustmentReason = reason && typeof reason === "string" && reason.trim() ? reason.trim() : numAmount < 0 ? "Koreksi penyesuaian token oleh Administrator" : "Top-Up token oleh Administrator";
+    sendSuccess(res, { user: updated, added: numAmount, newTotal, reason: adjustmentReason }, `Berhasil menyesuaikan token pengguna (${numAmount >= 0 ? "+" : ""}${numAmount})`);
   } catch (err) {
     next(err);
   }

@@ -56,8 +56,9 @@ function SettingsPage() {
   // Token Top-Up State
   const [selectedUserForToken, setSelectedUserForToken] = useState<string>("");
   const [tokenAmountInput, setTokenAmountInput] = useState<number>(1);
+  const [tokenReasonInput, setTokenReasonInput] = useState<string>("");
   const [addingTokens, setAddingTokens] = useState(false);
-  const [lastNotification, setLastNotification] = useState<{ name: string; added: number; newTotal: number } | null>(null);
+  const [lastNotification, setLastNotification] = useState<{ name: string; added: number; newTotal: number; reason?: string } | null>(null);
 
   useEffect(() => {
     loadAllData();
@@ -147,25 +148,27 @@ function SettingsPage() {
     }
   }
 
-  async function handleAddTokens(amountToAdd: number) {
+  async function handleAddTokens(amountToAdd: number, customReason?: string) {
     if (!selectedUserForToken) {
-      toast.error("Pilih pengguna yang akan ditambahkan token");
+      toast.error("Pilih pengguna yang akan ditambahkan/dikurangi token");
       return;
     }
     const targetUser = usersList.find(u => u.id === selectedUserForToken);
     if (!targetUser) return;
 
+    const finalReason = customReason || tokenReasonInput.trim() || (amountToAdd < 0 ? "Koreksi bug / penyesuaian kuota sistem oleh Admin" : "Top-up token oleh Admin");
+
     setAddingTokens(true);
     try {
-      const res = await api.admin.users.addTokens(selectedUserForToken, amountToAdd);
-      const newTotal = res?.newTotal ?? ((targetUser.promptTokens || 0) + amountToAdd);
+      const res = await api.admin.users.addTokens(selectedUserForToken, amountToAdd, finalReason);
+      const newTotal = res?.newTotal ?? Math.max(0, (targetUser.promptTokens || 0) + amountToAdd);
 
       // Trigger Notifikasi Realtime Toast & Banner Notifikasi
-      const notifData = { name: targetUser.name, added: amountToAdd, newTotal };
+      const notifData = { name: targetUser.name, added: amountToAdd, newTotal, reason: finalReason };
       setLastNotification(notifData);
 
       toast.success(
-        `⚡ Notifikasi Admin: Berhasil menambahkan ${amountToAdd} token ke akun ${targetUser.name}! Total Token: ${newTotal}`,
+        `⚡ Notifikasi Admin: Berhasil ${amountToAdd >= 0 ? 'menambahkan' : 'mengurangi'} ${Math.abs(amountToAdd)} token pada akun ${targetUser.name}! Total Token: ${newTotal}`,
         {
           duration: 6000,
           icon: <Sparkles className="text-amber-400" />,
@@ -175,7 +178,7 @@ function SettingsPage() {
       // Update UI state
       setUsersList(prev => prev.map(u => u.id === selectedUserForToken ? { ...u, promptTokens: newTotal } : u));
     } catch {
-      toast.error("Gagal menambahkan token ke akun");
+      toast.error("Gagal menyesuaikan token pengguna");
     } finally {
       setAddingTokens(false);
     }
@@ -462,34 +465,46 @@ function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-800 flex items-end gap-2">
-                    <div className="flex-1 space-y-1.5">
-                      <Label className="text-xs text-slate-400">Nominal Kustom:</Label>
+                  <div className="pt-2 border-t border-slate-800/80 space-y-3">
+                    <Field label="Alasan Penyesuaian / Pengurangan Token (Akan ditampilkan ke Pengguna):">
                       <Input
-                        type="number"
-                        min="1"
-                        value={tokenAmountInput}
-                        onChange={e => setTokenAmountInput(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="bg-slate-900 border-slate-800 text-xs font-bold text-amber-300"
+                        type="text"
+                        placeholder="Contoh: Koreksi penyesuaian sistem kuota token / klaim ganda..."
+                        value={tokenReasonInput}
+                        onChange={e => setTokenReasonInput(e.target.value)}
+                        className="bg-slate-900 border-slate-800 text-xs text-slate-200 placeholder:text-slate-600"
                       />
+                    </Field>
+
+                    <div className="flex items-end gap-2">
+                      <div className="flex-1 space-y-1.5">
+                        <Label className="text-xs text-slate-400">Nominal Kustom:</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={tokenAmountInput}
+                          onChange={e => setTokenAmountInput(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="bg-slate-900 border-slate-800 text-xs font-bold text-amber-300"
+                        />
+                      </div>
+
+                      <Button
+                        onClick={() => handleAddTokens(tokenAmountInput)}
+                        disabled={addingTokens}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-9 px-4 gap-1"
+                      >
+                        <Plus size={13} /> Tambah (+{tokenAmountInput})
+                      </Button>
+
+                      <Button
+                        onClick={() => handleAddTokens(-tokenAmountInput)}
+                        disabled={addingTokens}
+                        variant="outline"
+                        className="border-rose-700/50 bg-rose-950/30 text-rose-300 hover:bg-rose-950/60 font-bold text-xs h-9 px-4 gap-1"
+                      >
+                        <Minus size={13} /> Kurangi (-{tokenAmountInput})
+                      </Button>
                     </div>
-
-                    <Button
-                      onClick={() => handleAddTokens(tokenAmountInput)}
-                      disabled={addingTokens}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-9 px-4 gap-1"
-                    >
-                      <Plus size={13} /> Tambah (+{tokenAmountInput})
-                    </Button>
-
-                    <Button
-                      onClick={() => handleAddTokens(-tokenAmountInput)}
-                      disabled={addingTokens}
-                      variant="outline"
-                      className="border-rose-700/50 bg-rose-950/30 text-rose-300 hover:bg-rose-950/60 font-bold text-xs h-9 px-4 gap-1"
-                    >
-                      <Minus size={13} /> Kurangi (-{tokenAmountInput})
-                    </Button>
                   </div>
                 </div>
               </div>

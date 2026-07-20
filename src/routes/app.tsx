@@ -36,10 +36,11 @@ function AppLayout() {
   const prevTokensRef = useRef<number | null>(null);
 
   // Celebration state
-  const [celebration, setCelebration] = useState<{ open: boolean; added: number; newTotal: number }>({
+  const [celebration, setCelebration] = useState<{ open: boolean; added: number; newTotal: number; reason?: string }>({
     open: false,
     added: 0,
     newTotal: 0,
+    reason: "",
   });
 
   // Poll for token changes every 3.5s
@@ -50,9 +51,10 @@ function AppLayout() {
         if (me && typeof me.promptTokens === 'number') {
           const newTokens = me.promptTokens;
 
-          if (prevTokensRef.current !== null && newTokens > prevTokensRef.current) {
+          if (prevTokensRef.current !== null && newTokens !== prevTokensRef.current) {
             const added = newTokens - prevTokensRef.current;
-            setCelebration({ open: true, added, newTotal: newTokens });
+            const reason = (me as any).lastTokenReason || (added < 0 ? "Koreksi penyesuaian sistem kuota token oleh Administrator" : "Top-up token oleh Administrator");
+            setCelebration({ open: true, added, newTotal: newTokens, reason });
           }
 
           prevTokensRef.current = newTokens;
@@ -105,11 +107,12 @@ function AppLayout() {
     <div className="flex h-screen w-full overflow-hidden bg-background">
       <AppSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Super Cool Token Celebration Popup Modal */}
+      {/* Super Cool Token Celebration / Deduction Warning Popup Modal */}
       <TokenAddedCelebration
         open={celebration.open}
         addedCount={celebration.added}
         newTotal={celebration.newTotal}
+        reason={celebration.reason}
         onClose={() => setCelebration(prev => ({ ...prev, open: false }))}
       />
 
