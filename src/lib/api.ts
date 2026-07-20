@@ -150,6 +150,7 @@ export const api = {
       create: (body: any) => request<any>('/admin/users', { method: 'POST', body: JSON.stringify(body) }),
       update: (id: string, body: any) => request<any>(`/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
       delete: (id: string) => request<any>(`/admin/users/${id}`, { method: 'DELETE' }),
+      addTokens: (id: string, amount: number) => request<any>(`/admin/users/${id}/add-tokens`, { method: 'POST', body: JSON.stringify({ amount }) }),
     },
     feedbacks: {
       list: () => request<any[]>('/admin/feedbacks'),

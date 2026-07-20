@@ -21,6 +21,7 @@ router.get('/users', usersController.listUsers);
 router.post('/users', usersController.createUser);
 router.put('/users/:id', usersController.updateUser);
 router.delete('/users/:id', usersController.deleteUser);
+router.post('/users/:id/add-tokens', usersController.addTokensToUser);
 
 router.get('/feedbacks', feedbacksController.listFeedbacks);
 router.delete('/feedbacks/:id', feedbacksController.deleteFeedback);

@@ -54,3 +54,17 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
     sendNoContent(res);
   } catch (err) { next(err); }
 }
+
+export async function addTokensToUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { amount } = req.body;
+    const numAmount = parseInt(amount, 10) || 1;
+    const [user] = await db.select().from(users).where(eq(users.id, req.params.id as string)).limit(1);
+    if (!user) throw new NotFoundError('User');
+
+    const newTotal = (user.promptTokens || 0) + numAmount;
+    const [updated] = await db.update(users).set({ promptTokens: newTotal, updatedAt: new Date() }).where(eq(users.id, req.params.id as string)).returning();
+
+    sendSuccess(res, { user: updated, added: numAmount, newTotal }, `Berhasil menambahkan ${numAmount} token`);
+  } catch (err) { next(err); }
+}

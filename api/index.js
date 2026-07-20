@@ -3239,6 +3239,19 @@ async function deleteUser(req, res, next) {
     next(err);
   }
 }
+async function addTokensToUser(req, res, next) {
+  try {
+    const { amount } = req.body;
+    const numAmount = parseInt(amount, 10) || 1;
+    const [user] = await db.select().from(users).where(eq16(users.id, req.params.id)).limit(1);
+    if (!user) throw new NotFoundError("User");
+    const newTotal = (user.promptTokens || 0) + numAmount;
+    const [updated] = await db.update(users).set({ promptTokens: newTotal, updatedAt: /* @__PURE__ */ new Date() }).where(eq16(users.id, req.params.id)).returning();
+    sendSuccess(res, { user: updated, added: numAmount, newTotal }, `Berhasil menambahkan ${numAmount} token`);
+  } catch (err) {
+    next(err);
+  }
+}
 
 // server/src/modules/admin/feedbacks/feedbacks.controller.ts
 import { eq as eq17, desc as desc4 } from "drizzle-orm";
@@ -3278,6 +3291,7 @@ router3.get("/users", listUsers);
 router3.post("/users", createUser);
 router3.put("/users/:id", updateUser);
 router3.delete("/users/:id", deleteUser);
+router3.post("/users/:id/add-tokens", addTokensToUser);
 router3.get("/feedbacks", listFeedbacks);
 router3.delete("/feedbacks/:id", deleteFeedback);
 router3.get("/providers", listProviders);
