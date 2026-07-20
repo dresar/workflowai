@@ -4,44 +4,58 @@ import { Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { BrandLogo } from "@/components/brand-logo";
-import { signIn } from "@/lib/auth";
+import { signUp } from "@/lib/auth";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/login")({
+export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
-      { title: "Masuk — WorkflowAI" },
-      { name: "description", content: "Masuk ke WorkflowAI untuk mulai merancang aplikasi Anda." },
+      { title: "Daftar Akun — WorkflowAI" },
+      { name: "description", content: "Daftar akun WorkflowAI baru untuk mulai merancang aplikasi Anda." },
     ],
   }),
-  component: LoginPage,
+  component: RegisterPage,
 });
 
-function LoginPage() {
+function RegisterPage() {
   const navigate = useNavigate();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(true);
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email || !password) {
-      toast.error("Email dan password wajib diisi");
+    if (!name || !email || !password || !confirmPassword) {
+      toast.error("Semua bidang wajib diisi");
       return;
     }
+    if (password.length < 6) {
+      toast.error("Password minimal 6 karakter");
+      return;
+    }
+    if (password !== confirmPassword) {
+      toast.error("Konfirmasi password tidak cocok");
+      return;
+    }
+
     setLoading(true);
-    const user = await signIn(email, password);
-    setLoading(false);
-    if (!user) {
-      toast.error("Kredensial tidak dikenali");
-      return;
+    try {
+      const user = await signUp(name, email, password);
+      if (user) {
+        toast.success(`Akun berhasil dibuat. Selamat datang, ${user.name}!`);
+        navigate({ to: "/app" });
+      } else {
+        toast.error("Gagal mendaftarkan akun");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Email sudah digunakan atau terjadi kesalahan");
+    } finally {
+      setLoading(false);
     }
-    toast.success(`Selamat datang, ${user.name}`);
-    navigate({ to: user.role === "admin" ? "/admin" : "/app" });
   }
 
   return (
@@ -60,13 +74,25 @@ function LoginPage() {
 
           <div className="card-premium p-8">
             <div className="mb-6 text-center">
-              <h1 className="text-2xl font-semibold tracking-tight">Selamat Datang Kembali</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">Daftar Akun Baru</h1>
               <p className="mt-1.5 text-sm text-muted-foreground">
-                Masuk untuk melanjutkan ke workspace Anda
+                Mulai buat ide aplikasi Anda hari ini
               </p>
             </div>
 
             <form onSubmit={onSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nama Lengkap</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="John Doe"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -85,10 +111,10 @@ function LoginPage() {
                   <Input
                     id="password"
                     type={show ? "text" : "password"}
-                    placeholder="••••••••"
+                    placeholder="Minimal 6 karakter"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="current-password"
+                    autoComplete="new-password"
                     className="pr-10"
                   />
                   <button
@@ -102,70 +128,41 @@ function LoginPage() {
                 </div>
               </div>
 
-              <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Checkbox
-                  checked={remember}
-                  onCheckedChange={(v) => setRemember(Boolean(v))}
-                  id="remember"
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Konfirmasi Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type={show ? "text" : "password"}
+                  placeholder="Ulangi password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
                 />
-                <span>Ingat saya di perangkat ini</span>
-              </label>
+              </div>
 
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Mendaftarkan...
                   </>
                 ) : (
                   <>
-                    Masuk <ArrowRight className="ml-2 h-4 w-4" />
+                    Daftar Akun <ArrowRight className="ml-2 h-4 w-4" />
                   </>
                 )}
               </Button>
             </form>
 
             <div className="mt-4 text-center text-sm">
-              <span className="text-muted-foreground">Belum punya akun? </span>
-              <Link to="/register" className="text-primary font-medium hover:underline">
-                Daftar sekarang
+              <span className="text-muted-foreground">Sudah punya akun? </span>
+              <Link to="/login" className="text-primary font-medium hover:underline">
+                Masuk
               </Link>
             </div>
-
-            {!import.meta.env.PROD && (
-              <div className="mt-6 rounded-md border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground">
-                <div className="font-medium text-foreground/80 mb-2 text-center">Pilih Login Demo (Klik untuk Isi)</div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-xs h-8 border-border bg-card/60 hover:bg-card"
-                    onClick={() => {
-                      setEmail("admin@app.com");
-                      setPassword("admin123");
-                    }}
-                  >
-                    Admin Demo
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-xs h-8 border-border bg-card/60 hover:bg-card"
-                    onClick={() => {
-                      setEmail("user@app.com");
-                      setPassword("user123");
-                    }}
-                  >
-                    User Demo
-                  </Button>
-                </div>
-              </div>
-            )}
           </div>
 
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            Dengan masuk, Anda menyetujui Ketentuan Layanan dan Kebijakan Privasi kami.
+            Dengan mendaftar, Anda menyetujui Ketentuan Layanan dan Kebijakan Privasi kami.
           </p>
         </div>
       </div>

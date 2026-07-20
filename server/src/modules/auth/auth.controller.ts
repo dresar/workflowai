@@ -13,6 +13,15 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
   }
 }
 
+export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const result = await service.register(req.body);
+    sendSuccess(res, result, 'Registration successful');
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function refresh(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { refreshToken } = req.body as { refreshToken: string };

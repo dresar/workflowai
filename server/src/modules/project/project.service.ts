@@ -1,5 +1,5 @@
 import { ProjectRepository } from './project.repository';
-import { NotFoundError } from '../../errors/domain-errors';
+import { NotFoundError, ForbiddenError } from '../../errors/domain-errors';
 import type { CreateProjectDto, UpdateProjectDto, SaveTechnologiesDto, SaveAnswersDto, SaveCanvasDto, SaveDocumentDto } from './project.validation';
 import { RotationEngine } from '../../ai/rotation/rotation-engine';
 import { getProvider } from '../../ai/providers/provider.registry';
@@ -7,7 +7,7 @@ import { getProvider } from '../../ai/providers/provider.registry';
 const repo = new ProjectRepository();
 
 export class ProjectService {
-  async create(dto: CreateProjectDto) {
+  async create(dto: CreateProjectDto, userId: string) {
     return repo.create({
       name: dto.name,
       idea: dto.idea,
@@ -15,22 +15,25 @@ export class ProjectService {
       preferredAiTarget: dto.preferredAiTarget,
       techSelectionMode: dto.techSelectionMode,
       status: 'draft',
+      userId,
     });
   }
 
-  async list(params: { page: number; limit: number }) {
+  async list(params: { page: number; limit: number; userId?: string }) {
     return repo.findAll(params);
   }
 
-  async getById(id: string) {
+  async getById(id: string, userId?: string) {
     const project = await repo.findById(id);
     if (!project) throw new NotFoundError('Project');
+    if (userId && project.userId && project.userId !== userId) {
+      throw new ForbiddenError('You do not have access to this project');
+    }
     return project;
   }
 
-  async getFullProject(id: string) {
-    const project = await repo.findById(id);
-    if (!project) throw new NotFoundError('Project');
+  async getFullProject(id: string, userId?: string) {
+    const project = await this.getById(id, userId);
 
     const [technologies, answers, canvas, documents] = await Promise.all([
       repo.findTechnologies(id),
@@ -42,30 +45,32 @@ export class ProjectService {
     return { ...project, technologies, answers, canvas, documents };
   }
 
-  async update(id: string, dto: UpdateProjectDto) {
+  async update(id: string, dto: UpdateProjectDto, userId?: string) {
+    await this.getById(id, userId);
     const project = await repo.update(id, dto);
     if (!project) throw new NotFoundError('Project');
     return project;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, userId?: string): Promise<void> {
+    await this.getById(id, userId);
     const deleted = await repo.delete(id);
     if (!deleted) throw new NotFoundError('Project');
   }
 
-  async saveTechnologies(projectId: string, dto: SaveTechnologiesDto) {
-    await this.getById(projectId);
+  async saveTechnologies(projectId: string, dto: SaveTechnologiesDto, userId?: string) {
+    await this.getById(projectId, userId);
     const techs = dto.technologies.map((t) => ({ ...t, projectId }));
     return repo.saveTechnologies(projectId, techs);
   }
 
-  async getTechnologies(projectId: string) {
-    await this.getById(projectId);
+  async getTechnologies(projectId: string, userId?: string) {
+    await this.getById(projectId, userId);
     return repo.findTechnologies(projectId);
   }
 
-  async saveAnswers(projectId: string, dto: SaveAnswersDto) {
-    const project = await this.getById(projectId);
+  async saveAnswers(projectId: string, dto: SaveAnswersDto, userId?: string) {
+    const project = await this.getById(projectId, userId);
     const serialized = JSON.stringify(dto.answers);
 
     let autoName = project.name;
@@ -113,8 +118,8 @@ Return ONLY the raw title without any extra text, quotes, or markdown code block
     return dto.answers;
   }
 
-  async getAnswers(projectId: string) {
-    const project = await this.getById(projectId);
+  async getAnswers(projectId: string, userId?: string) {
+    const project = await this.getById(projectId, userId);
     if (project.description) {
       try {
         const parsed = JSON.parse(project.description);
@@ -126,37 +131,37 @@ Return ONLY the raw title without any extra text, quotes, or markdown code block
     return [];
   }
 
-  async saveCanvas(projectId: string, dto: SaveCanvasDto) {
-    await this.getById(projectId);
+  async saveCanvas(projectId: string, dto: SaveCanvasDto, userId?: string) {
+    await this.getById(projectId, userId);
     const canvas = await repo.saveCanvas({ projectId, ...dto });
     await repo.update(projectId, { status: 'canvas' });
     return canvas;
   }
 
-  async getCanvas(projectId: string) {
-    await this.getById(projectId);
+  async getCanvas(projectId: string, userId?: string) {
+    await this.getById(projectId, userId);
     return repo.findCanvas(projectId);
   }
 
-  async getDocuments(projectId: string) {
-    await this.getById(projectId);
+  async getDocuments(projectId: string, userId?: string) {
+    await this.getById(projectId, userId);
     return repo.findDocuments(projectId);
   }
 
-  async getDocumentByType(projectId: string, type: string) {
-    await this.getById(projectId);
+  async getDocumentByType(projectId: string, type: string, userId?: string) {
+    await this.getById(projectId, userId);
     const doc = await repo.findCurrentDocument(projectId, type);
     if (!doc) throw new NotFoundError(`${type} document`);
     return doc;
   }
 
-  async getDocumentHistory(projectId: string, type: string) {
-    await this.getById(projectId);
+  async getDocumentHistory(projectId: string, type: string, userId?: string) {
+    await this.getById(projectId, userId);
     return repo.findDocumentHistory(projectId, type);
   }
 
-  async saveDocumentManual(projectId: string, type: string, dto: SaveDocumentDto) {
-    await this.getById(projectId);
+  async saveDocumentManual(projectId: string, type: string, dto: SaveDocumentDto, userId?: string) {
+    await this.getById(projectId, userId);
 
     const doc = await repo.saveDocument({
       projectId,

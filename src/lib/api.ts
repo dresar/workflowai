@@ -36,9 +36,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     clearApiCache();
   }
 
+  const token = typeof window !== 'undefined' ? localStorage.getItem('wf.token') : null;
   const url = `${BASE_API_URL}${path}`;
   const headers = {
     'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };
 
@@ -74,6 +76,7 @@ export const api = {
 
   auth: {
     login: (body: any) => request<any>('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
+    register: (body: any) => request<any>('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
     refresh: (body: any) => request<any>('/auth/refresh', { method: 'POST', body: JSON.stringify(body) }),
   },
 

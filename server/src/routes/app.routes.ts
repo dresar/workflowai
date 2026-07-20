@@ -13,8 +13,10 @@ import {
 import * as projectController from '../modules/project/project.controller';
 import * as technologyController from '../modules/technology/technology.controller';
 import { getActiveQuestions } from '../modules/admin/questions/questions.controller';
+import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
+router.use(authMiddleware);
 
 router.get('/technologies', technologyController.listActiveForUser);
 router.get('/technologies/categories', technologyController.getCategories);

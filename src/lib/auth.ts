@@ -1,5 +1,4 @@
-// Simple dummy auth store using localStorage.
-// Designed so it can be swapped for a real backend later.
+import { api } from "./api";
 
 export type Role = "admin" | "user";
 
@@ -11,32 +10,48 @@ export interface AuthUser {
 
 const KEY = "wf.auth";
 
-const DUMMY_USERS: Array<AuthUser & { password: string }> = [
-  { email: "admin@app.com", password: "admin123", name: "Admin Utama", role: "admin" },
-  { email: "user@app.com", password: "user123", name: "Rafi Pratama", role: "user" },
-];
-
-export function signIn(email: string, password: string): AuthUser | null {
-  const found = DUMMY_USERS.find(
-    (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password,
-  );
-  if (!found) {
-    // Fallback: any email containing "admin" becomes admin, else user.
-    if (email && password) {
-      const role: Role = email.toLowerCase().includes("admin") ? "admin" : "user";
-      const user: AuthUser = { email, name: email.split("@")[0] ?? "Pengguna", role };
-      persist(user);
-      return user;
+export async function signIn(email: string, password: string): Promise<AuthUser | null> {
+  try {
+    const result = await api.auth.login({ email, password });
+    if (result && result.accessToken) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("wf.token", result.accessToken);
+        localStorage.setItem("wf.refresh_token", result.refreshToken);
+      }
+      persist(result.user);
+      return result.user;
     }
-    return null;
+  } catch (err) {
+    console.error("Sign in failed:", err);
   }
-  const { password: _p, ...user } = found;
-  persist(user);
-  return user;
+  return null;
+}
+
+export async function signUp(name: string, email: string, password: string): Promise<AuthUser | null> {
+  try {
+    const result = await api.auth.register({ name, email, password });
+    if (result && result.accessToken) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("wf.token", result.accessToken);
+        localStorage.setItem("wf.refresh_token", result.refreshToken);
+      }
+      persist(result.user);
+      return result.user;
+    }
+  } catch (err) {
+    console.error("Sign up failed:", err);
+    throw err;
+  }
+  return null;
 }
 
 export function signOut() {
-  if (typeof window !== "undefined") localStorage.removeItem(KEY);
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(KEY);
+    localStorage.removeItem("wf.token");
+    localStorage.removeItem("wf.refresh_token");
+    localStorage.removeItem("active_project_id");
+  }
 }
 
 export function getUser(): AuthUser | null {

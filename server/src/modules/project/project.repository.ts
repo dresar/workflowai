@@ -21,11 +21,12 @@ export class ProjectRepository {
     return row;
   }
 
-  async findAll(params: PaginationParams): Promise<{ items: Project[]; total: number }> {
+  async findAll(params: PaginationParams & { userId?: string }): Promise<{ items: Project[]; total: number }> {
     const offset = calcOffset(params.page, params.limit);
+    const conditions = params.userId ? eq(projects.userId, params.userId) : undefined;
     const [items, [{ count }]] = await Promise.all([
-      db.select().from(projects).orderBy(desc(projects.createdAt)).limit(params.limit).offset(offset),
-      db.select({ count: sql<number>`count(*)` }).from(projects),
+      db.select().from(projects).where(conditions).orderBy(desc(projects.createdAt)).limit(params.limit).offset(offset),
+      db.select({ count: sql<number>`count(*)` }).from(projects).where(conditions),
     ]);
     return { items, total: Number(count) };
   }

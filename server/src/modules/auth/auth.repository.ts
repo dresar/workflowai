@@ -16,4 +16,9 @@ export class AuthRepository {
   async updateLastLogin(id: string): Promise<void> {
     await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, id));
   }
+
+  async create(data: typeof users.$inferInsert) {
+    const [row] = await db.insert(users).values(data).returning();
+    return row;
+  }
 }
