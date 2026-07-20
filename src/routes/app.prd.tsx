@@ -567,7 +567,7 @@ function PRDPage() {
               <div>
                 <h4 className="text-xs font-bold text-indigo-300">Generate dengan AI (Otomatis)</h4>
                 <p className="text-[10px] text-slate-400 mt-1 leading-normal">
-                  Gunakan AI internal (Gemini/Groq) untuk langsung meng-generate 10 modul prompt secara berurutan.
+                  Gunakan AI Bawaan System (AI Engine) untuk langsung meng-generate 10 modul prompt secara berurutan.
                 </p>
               </div>
             </button>

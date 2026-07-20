@@ -2,7 +2,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Save, Loader2, User, Coins, Sliders, Bell, Plus, CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
+import { Save, Loader2, User, Coins, Sliders, Bell, Plus, Minus, CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
 import { AdminPage } from "@/components/admin-page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -429,26 +429,42 @@ function SettingsPage() {
                   </Field>
 
                   <div>
-                    <Label className="text-xs text-slate-300 mb-2 block font-medium">Pilih Quick Nominal Token:</Label>
-                    <div className="grid grid-cols-4 gap-2">
+                    <Label className="text-xs text-slate-300 mb-2 block font-medium">Tambah Token (+) Quick Action:</Label>
+                    <div className="grid grid-cols-4 gap-2 mb-3">
                       {[1, 5, 10, 50].map((amt) => (
                         <Button
-                          key={amt}
+                          key={`add-${amt}`}
                           type="button"
                           variant="outline"
                           onClick={() => handleAddTokens(amt)}
                           disabled={addingTokens}
-                          className="h-10 text-xs font-bold border-amber-500/30 text-amber-300 hover:bg-amber-950/60 hover:border-amber-500/60 gap-1"
+                          className="h-9 text-xs font-bold border-emerald-500/30 text-emerald-300 hover:bg-emerald-950/60 hover:border-emerald-500/60 gap-1"
                         >
-                          <Plus size={12} /> {amt} Token
+                          <Plus size={12} /> +{amt} Token
+                        </Button>
+                      ))}
+                    </div>
+
+                    <Label className="text-xs text-slate-300 mb-2 block font-medium">Kurangi Token (-) Jika Ada Bug / Adjustment:</Label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[1, 5, 10, 50].map((amt) => (
+                        <Button
+                          key={`sub-${amt}`}
+                          type="button"
+                          variant="outline"
+                          onClick={() => handleAddTokens(-amt)}
+                          disabled={addingTokens}
+                          className="h-9 text-xs font-bold border-rose-500/30 text-rose-300 hover:bg-rose-950/60 hover:border-rose-500/60 gap-1"
+                        >
+                          <Minus size={12} /> -{amt} Token
                         </Button>
                       ))}
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-800 flex items-end gap-3">
+                  <div className="pt-3 border-t border-slate-800 flex items-end gap-2">
                     <div className="flex-1 space-y-1.5">
-                      <Label className="text-xs text-slate-400">Atau Masukkan Nominal Kustom:</Label>
+                      <Label className="text-xs text-slate-400">Nominal Kustom:</Label>
                       <Input
                         type="number"
                         min="1"
@@ -461,10 +477,18 @@ function SettingsPage() {
                     <Button
                       onClick={() => handleAddTokens(tokenAmountInput)}
                       disabled={addingTokens}
-                      className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs h-9 px-5 gap-1.5"
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-9 px-4 gap-1"
                     >
-                      {addingTokens ? <Loader2 size={13} className="animate-spin" /> : <Coins size={14} />}
-                      + Tambahkan {tokenAmountInput} Token
+                      <Plus size={13} /> Tambah (+{tokenAmountInput})
+                    </Button>
+
+                    <Button
+                      onClick={() => handleAddTokens(-tokenAmountInput)}
+                      disabled={addingTokens}
+                      variant="outline"
+                      className="border-rose-700/50 bg-rose-950/30 text-rose-300 hover:bg-rose-950/60 font-bold text-xs h-9 px-4 gap-1"
+                    >
+                      <Minus size={13} /> Kurangi (-{tokenAmountInput})
                     </Button>
                   </div>
                 </div>

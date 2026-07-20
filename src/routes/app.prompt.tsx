@@ -1622,7 +1622,7 @@ ${techStack.length > 0 ? techStack.map(t => `- **${t}**`).join('\n') : `- React 
                     </div>
                     <h3 className="text-xs font-bold text-indigo-200">AI Bawaan System</h3>
                     <p className="text-[10.5px] text-slate-400 mt-1 leading-relaxed">
-                      Gunakan AI internal (Gemini / Groq) untuk langsung meng-generate 10 modul prompt secara berurutan.
+                      Gunakan AI Bawaan System (AI Engine) untuk langsung meng-generate 10 modul prompt secara berurutan.
                     </p>
                   </div>
 
